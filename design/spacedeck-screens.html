@@ -1,0 +1,556 @@
+<title>SpaceDeck Screens</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#e6e9e7; --panel:#f4f6f5; --ink:#151918; --muted:#58625e; --line:#c7cecb;
+  --accent:#d24a12; --accent-ink:#ffffff; --chip:#dfe4e1;
+  --shell:#242827; --shell-edge:#121514; --key:#353b39; --key-top:#454c4a; --key-ink:#e6ebe8;
+  --paper:#dcdfd6; --eink:#1b1d1c;
+  --mono:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --sans:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1211; --panel:#171b1a; --ink:#e3e8e6; --muted:#94a19c; --line:#2a312f;
+    --accent:#ff7443; --accent-ink:#140a05; --chip:#222826;
+    --shell:#1d2120; --shell-edge:#060807; --key:#2d3331; --key-top:#3a413f;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1211; --panel:#171b1a; --ink:#e3e8e6; --muted:#94a19c; --line:#2a312f;
+  --accent:#ff7443; --accent-ink:#140a05; --chip:#222826;
+  --shell:#1d2120; --shell-edge:#060807; --key:#2d3331; --key-top:#3a413f;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:20px;padding-block:28px 48px}
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;margin-bottom:22px}
+h1{font-family:var(--mono);font-weight:700;font-size:clamp(22px,3.2vw,30px);letter-spacing:-.01em;margin:0;text-wrap:balance}
+h1 .cur{display:inline-block;width:.55em;height:1em;background:var(--accent);vertical-align:-.12em;margin-left:.08em;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+@media (prefers-reduced-motion:reduce){h1 .cur{animation:none}}
+.lede{color:var(--muted);max-width:62ch;margin:6px 0 0}
+.spec{font-family:var(--mono);font-size:12px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap}
+.spec span{background:var(--chip);padding:3px 8px;border-radius:4px}
+
+.grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:22px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:1fr}}
+
+/* ---------- device ---------- */
+.device{background:var(--shell);border-radius:18px;padding:clamp(12px,2.4vw,24px);box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 0 0 1px var(--shell-edge),0 18px 40px -22px rgba(0,0,0,.55)}
+.bezel{background:#0b0d0c;border-radius:8px;padding:clamp(6px,1.2vw,12px);position:relative}
+canvas#epd{display:block;width:100%;height:auto;image-rendering:pixelated;border-radius:2px}
+.bezel .tag{position:absolute;right:14px;bottom:-19px;font:600 10px var(--mono);color:#6b7471;letter-spacing:.14em}
+.top-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:clamp(10px,1.8vw,18px);align-items:center}
+.deck{margin-top:clamp(18px,2.6vw,28px)}
+.keys{display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(6px,1.4vw,12px)}
+.key{appearance:none;border:0;cursor:pointer;aspect-ratio:1/0.82;border-radius:8px;background:linear-gradient(var(--key-top),var(--key));color:var(--key-ink);
+  box-shadow:0 3px 0 var(--shell-edge),0 0 0 1px rgba(0,0,0,.35);font:600 12px var(--mono);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  transition:transform .06s, box-shadow .06s;padding:4px;min-width:0}
+.key small{font-weight:400;font-size:10px;opacity:.6}
+.key:active,.key.down{transform:translateY(3px);box-shadow:0 0 0 var(--shell-edge),0 0 0 1px rgba(0,0,0,.35)}
+.key:focus-visible,.knob button:focus-visible,.ctl:focus-visible,.pick button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.knobrow{display:flex;align-items:center;justify-content:flex-end;gap:14px;margin-top:16px;flex-wrap:wrap}
+.knob{display:flex;flex-direction:column;align-items:center;gap:8px}
+.knob button{appearance:none;border:0;cursor:pointer;color:var(--key-ink);font:600 13px var(--mono);background:var(--key);border-radius:999px;height:38px;min-width:38px;padding:0 12px;box-shadow:0 2px 0 var(--shell-edge)}
+.knob .cap{width:clamp(52px,7vw,68px);height:clamp(52px,7vw,68px);border-radius:50%;background:radial-gradient(circle at 35% 30%,#5a615f,#2b302e 70%);box-shadow:0 3px 0 var(--shell-edge),0 0 0 3px #1a1e1d;font-size:11px;padding:0}
+.knob-lbl{font:600 11px var(--mono);color:#8a9491;letter-spacing:.12em}
+.linkbtn{appearance:none;border:1px solid #3d4442;background:transparent;color:#c9d0cd;font:500 12px var(--mono);padding:8px 12px;border-radius:6px;cursor:pointer}
+.linkbtn:hover{border-color:#6a7370}
+
+/* ---------- side panel ---------- */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.panel h2{font:700 12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0;padding:14px 16px 8px}
+.pick{list-style:none;margin:0;padding:0 8px 8px;display:grid;gap:2px}
+.pick button{width:100%;text-align:left;appearance:none;border:0;background:transparent;color:var(--ink);font:500 14px var(--sans);padding:8px 10px;border-radius:6px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.pick button:hover{background:var(--chip)}
+.pick button[aria-current="true"]{background:var(--ink);color:var(--bg)}
+.pick button .rf{font:500 10px var(--mono);letter-spacing:.08em;opacity:.65;white-space:nowrap}
+.detail{border-top:1px solid var(--line);padding:14px 16px 16px;display:grid;gap:10px}
+.detail h3{margin:0;font:700 17px var(--mono)}
+.row{display:grid;grid-template-columns:78px 1fr;gap:10px;font-size:14px}
+.row b{font:600 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding-top:2px}
+.note{font-size:13.5px;color:var(--muted);margin:0}
+
+.opts{display:flex;flex-wrap:wrap;gap:8px 16px;padding:12px 16px;border-top:1px solid var(--line);font-size:13px}
+.opts label{display:flex;align-items:center;gap:6px;cursor:pointer}
+.opts select{font:inherit;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:2px 4px}
+
+.below{margin-top:26px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+.card h4{margin:0 0 6px;font:700 13px var(--mono);letter-spacing:.06em}
+.card p{margin:0;font-size:14px;color:var(--muted)}
+.card code{font-family:var(--mono);font-size:12.5px;color:var(--ink);background:var(--chip);padding:1px 5px;border-radius:3px}
+.hint{font:12px var(--mono);color:var(--muted);margin-top:14px}
+kbd{font:600 11px var(--mono);background:var(--chip);border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>SpaceDeck Screens<span class="cur" aria-hidden="true"></span></h1>
+      <p class="lede">Mockups for the 2.13″ e-paper, drawn pixel for pixel in the retro-terminal style. The keys and knob work: click them, or use the keyboard.</p>
+    </div>
+    <div class="spec"><span>250 × 122 px</span><span>1-bit</span><span>5×7 font, 1× / 2× / 3×</span><span>partial refresh</span></div>
+  </header>
+
+  <div class="grid">
+    <section class="device" aria-label="SpaceDeck simulator">
+      <div class="top-row">
+        <div class="bezel"><canvas id="epd" width="1000" height="488" aria-label="E-paper screen preview"></canvas><span class="tag">2.13" E-PAPER</span></div>
+        <div class="knob" role="group" aria-label="Knob">
+          <button id="cw" aria-label="Turn knob clockwise">↻</button>
+          <button id="press" class="cap" aria-label="Press knob">PUSH</button>
+          <button id="ccw" aria-label="Turn knob counter-clockwise">↺</button>
+          <span class="knob-lbl">KNOB</span>
+        </div>
+      </div>
+      <div class="deck">
+        <div class="keys" id="keys"></div>
+      </div>
+      <div class="knobrow">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="linkbtn" id="linkbtn">Mac: disconnect</button>
+          <button class="linkbtn" id="bootbtn">Replay boot</button>
+        </div>
+      </div>
+      <p class="hint" style="color:#8a9491">Keys <kbd>1</kbd>–<kbd>8</kbd> · knob <kbd>←</kbd> <kbd>→</kbd> · push <kbd>Space</kbd> · idle <kbd>A</kbd></p>
+    </section>
+
+    <aside class="panel">
+      <h2>Screens</h2>
+      <ul class="pick" id="pick"></ul>
+      <div class="detail" id="detail" aria-live="polite"></div>
+      <div class="opts">
+        <label><input type="checkbox" id="epaper" checked> E-paper speed</label>
+        <label><input type="checkbox" id="gridpx"> Pixel grid</label>
+        <label>Wave <select id="wavestyle"><option value="line">line</option><option value="bars">bars</option><option value="scope">scope</option></select></label>
+      </div>
+    </aside>
+  </div>
+
+  <div class="below">
+    <div class="card"><h4>Labels line up with the keys</h4><p>The screen is split into a 2 × 4 grid, 61 px per cell, so each label sits right above its key. The small number tag in each corner matches the key under it.</p></div>
+    <div class="card"><h4>Only what changed redraws</h4><p>A key press inverts one cell; a layer switch redraws the grid; the header stays put. Every partial redraw leaves a faint ghost of the old image, so the firmware does a full, flashing refresh at boot and every ~50 partial updates to clear it.</p></div>
+    <div class="card"><h4>The knob shows steps, not a level</h4><p>The popup opens on the right edge, pointing at the knob beside the screen, and the header's <code>KNOB:</code> label sits on that side too. SpaceDeck only sends “volume up” and “volume down”, so the popup counts clicks (<code>+3</code>) instead of guessing the Mac’s volume. It closes 1.5 s after the last click.</p></div>
+    <div class="card"><h4>Ambient mode</h4><p>After 5 min with no input. The wave is generated on the pad. Making it follow your music would need a small I2S mic or a Mac helper app sending levels over Bluetooth. The first key press only wakes the screen, so it never fires a shortcut by accident.</p></div>
+  </div>
+</div>
+
+<script>
+(() => {
+"use strict";
+// ======================================================================
+//  1-bit framebuffer that mirrors what the firmware draws
+// ======================================================================
+const W = 250, H = 122, S = 4;
+const INK = 1, PAPER = 0;             // retro terminal: ink background, paper text
+const fb = new Uint8Array(W * H);
+const px = (x, y, v) => { if (x >= 0 && y >= 0 && x < W && y < H) fb[y * W + x] = v; };
+const rect = (x, y, w, h, v) => { for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) px(i, j, v); };
+const frame = (x, y, w, h, v) => { rect(x, y, w, 1, v); rect(x, y + h - 1, w, 1, v); rect(x, y, 1, h, v); rect(x + w - 1, y, 1, h, v); };
+const hdots = (y, x0, x1, v, step = 2) => { for (let x = x0; x <= x1; x += step) px(x, y, v); };
+
+// 5x7 font (same table goes into the firmware)
+const G = {
+ "A":[".###.","#...#","#...#","#####","#...#","#...#","#...#"],"B":["####.","#...#","#...#","####.","#...#","#...#","####."],
+ "C":[".###.","#...#","#....","#....","#....","#...#",".###."],"D":["####.","#...#","#...#","#...#","#...#","#...#","####."],
+ "E":["#####","#....","#....","####.","#....","#....","#####"],"F":["#####","#....","#....","####.","#....","#....","#...."],
+ "G":[".###.","#...#","#....","#.###","#...#","#...#",".####"],"H":["#...#","#...#","#...#","#####","#...#","#...#","#...#"],
+ "I":[".###.","..#..","..#..","..#..","..#..","..#..",".###."],"J":["..###","...#.","...#.","...#.","...#.","#..#.",".##.."],
+ "K":["#...#","#..#.","#.#..","##...","#.#..","#..#.","#...#"],"L":["#....","#....","#....","#....","#....","#....","#####"],
+ "M":["#...#","##.##","#.#.#","#.#.#","#...#","#...#","#...#"],"N":["#...#","#...#","##..#","#.#.#","#..##","#...#","#...#"],
+ "O":[".###.","#...#","#...#","#...#","#...#","#...#",".###."],"P":["####.","#...#","#...#","####.","#....","#....","#...."],
+ "Q":[".###.","#...#","#...#","#...#","#.#.#","#..#.",".##.#"],"R":["####.","#...#","#...#","####.","#.#..","#..#.","#...#"],
+ "S":[".####","#....","#....",".###.","....#","....#","####."],"T":["#####","..#..","..#..","..#..","..#..","..#..","..#.."],
+ "U":["#...#","#...#","#...#","#...#","#...#","#...#",".###."],"V":["#...#","#...#","#...#","#...#","#...#",".#.#.","..#.."],
+ "W":["#...#","#...#","#...#","#.#.#","#.#.#","#.#.#",".#.#."],"X":["#...#","#...#",".#.#.","..#..",".#.#.","#...#","#...#"],
+ "Y":["#...#","#...#",".#.#.","..#..","..#..","..#..","..#.."],"Z":["#####","....#","...#.","..#..",".#...","#....","#####"],
+ "0":[".###.","#...#","#..##","#.#.#","##..#","#...#",".###."],"1":["..#..",".##..","..#..","..#..","..#..","..#..",".###."],
+ "2":[".###.","#...#","....#","...#.","..#..",".#...","#####"],"3":["#####","...#.","..#..","...#.","....#","#...#",".###."],
+ "4":["...#.","..##.",".#.#.","#..#.","#####","...#.","...#."],"5":["#####","#....","####.","....#","....#","#...#",".###."],
+ "6":["..##.",".#...","#....","####.","#...#","#...#",".###."],"7":["#####","....#","...#.","..#..",".#...",".#...",".#..."],
+ "8":[".###.","#...#","#...#",".###.","#...#","#...#",".###."],"9":[".###.","#...#","#...#",".####","....#","...#.",".##.."],
+ " ":[".....",".....",".....",".....",".....",".....","....."],
+ ">":["#....",".#...","..#..","...#.","..#..",".#...","#...."],"<":["....#","...#.","..#..",".#...","..#..","...#.","....#"],
+ "_":[".....",".....",".....",".....",".....",".....","#####"],"/":["....#","....#","...#.","..#..",".#...","#....","#...."],
+ "+":[".....","..#..","..#..","#####","..#..","..#..","....."],"-":[".....",".....",".....","#####",".....",".....","....."],
+ ".":[".....",".....",".....",".....",".....",".##..",".##.."],":":[".....",".##..",".##..",".....",".##..",".##..","....."],
+ "[":[".###.",".#...",".#...",".#...",".#...",".#...",".###."],"]":[".###.","...#.","...#.","...#.","...#.","...#.",".###."],
+ "%":["##...","##..#","...#.","..#..",".#...","#..##","...##"],"!":["..#..","..#..","..#..","..#..","..#..",".....","..#.."],
+ "?":[".###.","#...#","....#","...#.","..#..",".....","..#.."],"(":["...#.","..#..",".#...",".#...",".#...","..#..","...#."],
+ ")":[".#...","..#..","...#.","...#.","...#.","..#..",".#..."],"#":[".#.#.",".#.#.","#####",".#.#.","#####",".#.#.",".#.#."],
+ "=":[".....",".....","#####",".....","#####",".....","....."],"*":[".....","..#..","#.#.#",".###.","#.#.#","..#..","....."],
+ "|":["..#..","..#..","..#..","..#..","..#..","..#..","..#.."],",":[".....",".....",".....",".....",".##..","..#..",".#..."],
+ "'":["..#..","..#..",".#...",".....",".....",".....","....."],"`":["#....",".#...","..#..",".....",".....",".....","....."],
+ "^":["..#..",".###.","#.#.#","..#..","..#..","..#..","..#.."],"~":["..#..","..#..","..#..","..#..","#.#.#",".###.","..#.."]
+};
+const text = (s, x, y, sc, v) => {
+  for (const ch of s.toUpperCase()) {
+    const g = G[ch] || G["?"];
+    for (let r = 0; r < 7; r++) for (let c = 0; c < 5; c++) if (g[r][c] === "#") rect(x + c * sc, y + r * sc, sc, sc, v);
+    x += 6 * sc;
+  }
+};
+const tw = (s, sc) => s.length * 6 * sc - sc;
+const ctext = (s, cx, y, sc, v) => text(s, Math.round(cx - tw(s, sc) / 2), y, sc, v);
+const icon = (rows, x, y, v) => rows.forEach((r, j) => [...r].forEach((c, i) => { if (c === "#") px(x + i, y + j, v); }));
+const arc = (cx, cy, r, a0, a1, v, dash) => { let n = 0; for (let a = a0; a <= a1; a += 0.6 / r) { n++; if (dash && n % 4 < 2) continue; px(Math.round(cx + r * Math.cos(a)), Math.round(cy + r * Math.sin(a)), v); } };
+const ellipse = (cx, cy, rx, ry, v, dash) => { let n = 0; for (let a = 0; a < Math.PI * 2; a += 0.8 / Math.max(rx, ry)) { n++; if (dash && n % 5 < 2) continue; px(Math.round(cx + rx * Math.cos(a)), Math.round(cy + ry * Math.sin(a)), v); } };
+
+const BT = ["..#..","..##.","#.#.#",".###.","..#..",".###.","#.#.#","..##.","..#.."];
+
+// ======================================================================
+//  Keymap (mirrors src/actions.cpp)
+// ======================================================================
+const LAYERS = [
+  { name: "MEDIA", knob: "VOL", knobName: "VOLUME",
+    keys: [["PLAY","PAUSE"],["PREV","TRACK"],["NEXT","TRACK"],["MUTE","AUDIO"],["COPY","CMD+C"],["PASTE","CMD+V"],["SHOT","CMD+SH+4"],["DEV>","LAYER"]] },
+  { name: "DEV", knob: "TABS", knobName: "TABS",
+    keys: [["SAVE","CMD+S"],["FIND","CMD+F"],["TERM","CTRL+`"],["CMT","CMD+/"],["UNDO","CMD+Z"],["REDO","CMD+SH+Z"],["SIG","TYPE TEXT"],["MED>","LAYER"]] },
+];
+
+const SCREENS = [
+  { id: "boot",     name: "Boot",             rf: "FULL",
+    when: "Power-on.", refresh: "Full refresh, then one line at a time",
+    note: "Logo in orbit, then a boot log of the real self-checks: keys, encoder, display, Bluetooth." },
+  { id: "awaiting", name: "Awaiting link",    rf: "PARTIAL",
+    when: "No Mac connected: first pairing, or the Mac is asleep.", refresh: "Partial, radar pulses about once a second",
+    note: "Tells you exactly where to pair, so you never need the serial monitor." },
+  { id: "linked",   name: "Link established", rf: "PARTIAL",
+    when: "The Mac connects.", refresh: "Partial, 1.5 s, then the layer view",
+    note: "Brief confirmation that keys are live." },
+  { id: "lost",     name: "Signal lost",      rf: "PARTIAL",
+    when: "The Mac disconnects or goes out of range.", refresh: "Partial",
+    note: "Key presses are dropped, not queued, so nothing fires late when it reconnects." },
+  { id: "layer",    name: "Layer view",       rf: "PARTIAL",
+    when: "Normal use.", refresh: "One cell per key press; the grid on a layer switch",
+    note: "Header: layer, what the knob does, page 1/2, link status. The pressed key's cell flashes inverted." },
+  { id: "overlay",  name: "Knob popup",       rf: "PARTIAL",
+    when: "Turning or pushing the knob.", refresh: "Partial, closes 1.5 s after the last click",
+    note: "Counts clicks in each direction. It can't show the Mac's actual volume, which the pad never receives." },
+  { id: "ambient",  name: "Ambient wave",     rf: "1–2 FPS",
+    when: "5 minutes with no input.", refresh: "Partial at 1–2 fps; a full refresh every few minutes",
+    note: "Generated on the pad. The first key press only wakes the screen." },
+];
+
+// ======================================================================
+//  State
+// ======================================================================
+const st = {
+  screen: "boot", t0: performance.now(), layer: 0, connected: true,
+  pressed: -1, pressedAt: 0,
+  overlay: null,            // {kind:'turn'|'push', delta, at}
+  bootAfter: "layer",
+  flashUntil: 0,
+};
+const now = () => performance.now();
+const since = () => (now() - st.t0) / 1000;
+const go = (screen, opts = {}) => {
+  st.screen = screen; st.t0 = now();
+  if (opts.flash) st.flashUntil = now() + 260;
+  if (screen !== "overlay") st.overlay = null;
+  syncUI();
+};
+
+// ======================================================================
+//  Screens
+// ======================================================================
+function header(title, right, btState) {
+  const blinkOn = Math.floor(now() / 1000) % 2 === 0;
+  text(">" + title, 3, 3, 1, PAPER);
+  if (blinkOn) rect(3 + tw(">" + title, 1) + 3, 3, 5, 7, PAPER);
+  if (right) text(right, 236 - tw(right, 1) - 4, 3, 1, PAPER);
+  if (btState === "on") icon(BT, 241, 2, PAPER);
+  else if (btState === "blink") { if (blinkOn) icon(BT, 241, 2, PAPER); }
+  else if (btState === "off") { icon(BT, 241, 2, PAPER); for (let i = 0; i < 9; i++) px(239 + i, 2 + i, PAPER); }
+  hdots(13, 0, W - 1, PAPER);
+}
+
+function drawBoot() {
+  const t = since();
+  if (t < 2.6) {
+    const a = t * 2.2;
+    ellipse(125, 50, 104, 22, PAPER, true);
+    ctext("SPACEDECK", 125, 40, 3, PAPER);
+    // satellite rides the orbit; hidden while "behind" the wordmark
+    const sx = Math.round(125 + 104 * Math.cos(a)), sy = Math.round(50 + 22 * Math.sin(a));
+    if (!(Math.sin(a) < 0 && Math.abs(sx - 125) < 82)) { rect(sx - 1, sy - 1, 3, 3, PAPER); px(sx - 3, sy, PAPER); px(sx + 3, sy, PAPER); }
+    ctext("MACROPAD // BUILD 0.1", 125, 92, 1, PAPER);
+    if (Math.floor(t * 2) % 2 === 0) ctext("SYSTEMS CHECK", 125, 106, 1, PAPER);
+    return;
+  }
+  header("BOOT", "", null);
+  const lines = [
+    ["SPACEDECK OS", "0.1"],
+    ["KEYS", "8/8 OK"],
+    ["ENCODER", "OK"],
+    ["DISPLAY", "OK"],
+    ["BLUETOOTH", "ADV"],
+  ];
+  const shown = Math.min(lines.length, Math.floor((t - 2.6) / 0.45) + 1);
+  for (let i = 0; i < shown; i++) {
+    const y = 20 + i * 13, [l, r] = lines[i];
+    text(l, 6, y, 1, PAPER);
+    const rx = 244 - tw(r, 1);
+    hdots(y + 6, 6 + tw(l, 1) + 4, rx - 5, PAPER, 3);
+    text(r, rx, y, 1, PAPER);
+  }
+  if (shown === lines.length) {
+    const y = 20 + lines.length * 13;
+    text("READY", 6, y, 1, PAPER);
+    if (Math.floor(now() / 500) % 2 === 0) rect(6 + tw("READY", 1) + 3, y, 5, 7, PAPER);
+    if (t > 2.6 + lines.length * 0.45 + 1.2) go(st.connected ? "linked" : "awaiting");
+  }
+}
+
+function drawAwaiting() {
+  header("LINK", "UNPAIRED", "blink");
+  const phase = Math.floor(since() * 1.2) % 4;
+  rect(28, 64, 4, 4, PAPER);
+  for (let i = 1; i <= 3; i++) if (phase >= i) arc(30, 66, 8 + i * 9, -0.9, 0.9, PAPER);
+  text("AWAITING LINK", 76, 30, 2, PAPER);
+  text("PAIR FROM YOUR MAC:", 76, 56, 1, PAPER);
+  text("SETTINGS > BLUETOOTH", 76, 70, 1, PAPER);
+  rect(74, 82, tw("> SPACEDECK", 1) + 4, 11, PAPER);
+  text("> SPACEDECK", 76, 84, 1, INK);
+  text("KEYS INACTIVE UNTIL PAIRED", 76, 104, 1, PAPER);
+}
+
+function drawLinked() {
+  header("LINK", "", "on");
+  ctext("LINK", 125, 30, 3, PAPER);
+  ctext("ESTABLISHED", 125, 60, 2, PAPER);
+  hdots(84, 60, 190, PAPER, 3);
+  ctext("HOST CONNECTED // KEYS LIVE", 125, 94, 1, PAPER);
+  if (since() > 1.6) go("layer");
+}
+
+function drawLost() {
+  header("LINK", "NO HOST", "off");
+  rect(28, 64, 4, 4, PAPER);
+  for (let i = 1; i <= 3; i++) arc(30, 66, 8 + i * 9, -0.9, 0.9, PAPER, true);
+  text("SIGNAL LOST", 76, 30, 2, PAPER);
+  const dots = ".".repeat(Math.floor(since() * 1.5) % 4);
+  text("RETRYING" + dots, 76, 56, 1, PAPER);
+  text("KEYS PAUSED", 76, 70, 1, PAPER);
+  text("PRESSES ARE DROPPED,", 76, 92, 1, PAPER);
+  text("NOT QUEUED", 76, 104, 1, PAPER);
+}
+
+function drawLayer() {
+  const L = LAYERS[st.layer];
+  header(L.name, "KNOB:" + L.knob + " [" + (st.layer + 1) + "/" + LAYERS.length + "]", st.connected ? "on" : "off");
+  for (let i = 0; i < 8; i++) {
+    const c = i % 4, r = Math.floor(i / 4);
+    const x = 1 + c * 62, y = 16 + r * 53, w = 61, h = 52;
+    const down = st.pressed === i && now() - st.pressedAt < 260;
+    const fg = down ? INK : PAPER;
+    if (down) rect(x, y, w, h, PAPER); else frame(x, y, w, h, PAPER);
+    rect(x, y, 9, 9, down ? INK : PAPER);
+    text(String(i + 1), x + 2, y + 1, 1, down ? PAPER : INK);
+    const [main, sub] = L.keys[i];
+    ctext(main, x + 30.5, y + 17, 2, fg);
+    ctext(sub, x + 30.5, y + 38, 1, fg);
+  }
+
+}
+
+function drawOverlay() {
+  drawLayer();
+  const o = st.overlay;
+  if (!o) return;
+  const L = LAYERS[st.layer];
+  // anchored to the right edge, centred on the screen: the knob sits just to the right
+  const w = 194, h = 72, x = W - w - 8, y = 64 - h / 2;
+  rect(x - 2, y - 2, w + 4, h + 4, INK);
+  rect(x, y, w, h, PAPER);
+  frame(x + 2, y + 2, w - 4, h - 4, INK);
+  // pointer toward the knob
+  for (let i = 0; i < 6; i++) rect(x + w + i, 64 - (5 - i), 1, (5 - i) * 2 + 1, PAPER);
+  text(L.knobName, x + 10, y + 9, 1, INK);
+  if (o.kind === "push") {
+    const label = st.layer === 0 ? "MUTE" : "---";
+    ctext(label, x + w / 2, y + 26, 3, INK);
+    ctext(st.layer === 0 ? "TOGGLED" : "NO ACTION ON THIS LAYER", x + w / 2, y + 54, 1, INK);
+  } else {
+    const d = Math.max(-8, Math.min(8, o.delta));
+    const s = (o.delta > 0 ? "+" : "") + o.delta;
+    text(s, x + w - 10 - tw(s, 3), y + 6, 3, INK);
+    const dir = o.delta > 0 ? (st.layer === 0 ? "RAISING" : "NEXT TAB") : (st.layer === 0 ? "LOWERING" : "PREV TAB");
+    text(dir, x + 10, y + 21, 1, INK);
+    // step meter: 17 ticks, centre = 0
+    const tx0 = x + 14, ty = y + 42;
+    for (let k = -8; k <= 8; k++) {
+      const tx = tx0 + (k + 8) * 10;
+      const filled = (d > 0 && k > 0 && k <= d) || (d < 0 && k < 0 && k >= d);
+      if (k === 0) rect(tx + 2, ty - 3, 2, 18, INK);
+      else if (filled) rect(tx, ty, 6, 12, INK);
+      else frame(tx, ty, 6, 12, INK);
+    }
+  }
+  if (now() - o.at > 1500) { st.overlay = null; go("layer"); }
+}
+
+function drawAmbient() {
+  const style = document.getElementById("wavestyle").value;
+  header("AMBIENT", "ANY KEY: WAKE", st.connected ? "on" : "off");
+  const t = since();
+  const top = 17, bot = 108, mid = Math.round((top + bot) / 2);
+  for (let gx = 5; gx < W; gx += 10) for (let gy = top + 2; gy <= bot; gy += 10) px(gx, gy, PAPER);
+  const f = (x) => mid + 30 * (0.55 * Math.sin(x * 0.045 + t * 0.9) + 0.3 * Math.sin(x * 0.11 - t * 1.7) + 0.25 * Math.sin(x * 0.021 + t * 0.35));
+  if (style === "bars") {
+    for (let x = 2; x < W - 2; x += 4) {
+      const a = Math.abs(f(x) - mid);
+      rect(x, Math.round(mid - a), 2, Math.max(1, Math.round(a * 2)), PAPER);
+    }
+  } else if (style === "scope") {
+    for (let x = 0; x < W; x++) { const y = Math.round(f(x)); px(x, y, PAPER); px(x, Math.round(2 * mid - y), PAPER); }
+    hdots(mid, 0, W - 1, PAPER, 4);
+  } else {
+    let prev = Math.round(f(0));
+    for (let x = 0; x < W; x++) {
+      const y = Math.round(f(x));
+      const a = Math.min(prev, y), b = Math.max(prev, y);
+      rect(x, a, 1, b - a + 2, PAPER);
+      prev = y;
+    }
+  }
+  const up = 42 * 60 + 17 + Math.floor(t);
+  const hh = String(Math.floor(up / 3600)).padStart(2, "0"), mm = String(Math.floor(up / 60) % 60).padStart(2, "0"), ss = String(up % 60).padStart(2, "0");
+  text("T+" + hh + ":" + mm + ":" + ss, 3, 113, 1, PAPER);
+  text(LAYERS[st.layer].name + " READY", 247 - tw(LAYERS[st.layer].name + " READY", 1), 113, 1, PAPER);
+}
+
+const DRAW = { boot: drawBoot, awaiting: drawAwaiting, linked: drawLinked, lost: drawLost, layer: drawLayer, overlay: drawOverlay, ambient: drawAmbient };
+
+// ======================================================================
+//  Render to canvas (e-paper colours, optional pixel grid)
+// ======================================================================
+const cv = document.getElementById("epd"), ctx = cv.getContext("2d");
+const img = ctx.createImageData(W * S, H * S);
+const PAPER_RGB = [220, 223, 214], INK_RGB = [27, 29, 28], GRID_RGB = [60, 63, 61];
+function blit(invert) {
+  const grid = document.getElementById("gridpx").checked;
+  const d = img.data;
+  for (let y = 0; y < H * S; y++) {
+    const sy = (y / S) | 0, gy = grid && y % S === S - 1;
+    for (let x = 0; x < W * S; x++) {
+      const sx = (x / S) | 0;
+      let ink = fb[sy * W + sx] === INK;
+      if (invert) ink = !ink;
+      let c = ink ? INK_RGB : PAPER_RGB;
+      if (grid && (gy || x % S === S - 1)) c = ink ? GRID_RGB : [196, 199, 190];
+      const o = (y * W * S + x) * 4;
+      d[o] = c[0]; d[o + 1] = c[1]; d[o + 2] = c[2]; d[o + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+let lastPaint = 0;
+function loop(ts) {
+  const epaper = document.getElementById("epaper").checked;
+  const interval = epaper ? (st.screen === "ambient" ? 600 : 90) : 33;
+  if (ts - lastPaint >= interval) {
+    lastPaint = ts;
+    fb.fill(INK);
+    DRAW[st.screen]();
+    blit(epaper && now() < st.flashUntil && Math.floor((st.flashUntil - now()) / 90) % 2 === 0);
+  }
+  requestAnimationFrame(loop);
+}
+
+// ======================================================================
+//  UI
+// ======================================================================
+const keysEl = document.getElementById("keys");
+const keyBtns = [];
+for (let i = 0; i < 8; i++) {
+  const b = document.createElement("button");
+  b.className = "key"; b.type = "button";
+  b.addEventListener("click", () => pressKey(i));
+  keysEl.appendChild(b); keyBtns.push(b);
+}
+function syncKeys() {
+  LAYERS[st.layer].keys.forEach(([m, s], i) => {
+    keyBtns[i].innerHTML = `<span>${i + 1}</span><small>${m.toLowerCase()}</small>`;
+    keyBtns[i].setAttribute("aria-label", `Key ${i + 1}: ${m} ${s}`);
+  });
+}
+
+function pressKey(i) {
+  keyBtns[i].classList.add("down"); setTimeout(() => keyBtns[i].classList.remove("down"), 120);
+  if (st.screen === "ambient") { go("layer"); return; }                 // first press only wakes
+  if (!["layer", "overlay"].includes(st.screen)) return;                  // keys inactive on link screens
+  if (i === 7) { st.layer = (st.layer + 1) % LAYERS.length; syncKeys(); go("layer"); }
+  else { st.pressed = i; st.pressedAt = now(); if (st.screen === "overlay") go("layer"); }
+}
+function turn(dir) {
+  if (st.screen === "ambient") { go("layer"); return; }
+  if (!["layer", "overlay"].includes(st.screen)) return;
+  const o = st.overlay;
+  const delta = o && o.kind === "turn" && Math.sign(o.delta) === dir ? o.delta + dir : dir;
+  st.overlay = { kind: "turn", delta, at: now() };
+  if (st.screen !== "overlay") { st.screen = "overlay"; st.t0 = now(); syncUI(); }
+}
+function push() {
+  if (st.screen === "ambient") { go("layer"); return; }
+  if (!["layer", "overlay"].includes(st.screen)) return;
+  st.overlay = { kind: "push", delta: 0, at: now() };
+  if (st.screen !== "overlay") { st.screen = "overlay"; st.t0 = now(); syncUI(); }
+}
+document.getElementById("cw").addEventListener("click", () => turn(1));
+document.getElementById("ccw").addEventListener("click", () => turn(-1));
+document.getElementById("press").addEventListener("click", push);
+
+const linkBtn = document.getElementById("linkbtn");
+linkBtn.addEventListener("click", () => {
+  st.connected = !st.connected;
+  go(st.connected ? "linked" : "lost");
+});
+document.getElementById("bootbtn").addEventListener("click", () => go("boot", { flash: true }));
+
+// screen picker
+const pick = document.getElementById("pick"), detail = document.getElementById("detail");
+SCREENS.forEach(s => {
+  const li = document.createElement("li");
+  const b = document.createElement("button");
+  b.type = "button"; b.dataset.id = s.id;
+  b.innerHTML = `<span>${s.name}</span><span class="rf">${s.rf}</span>`;
+  b.addEventListener("click", () => jump(s.id));
+  li.appendChild(b); pick.appendChild(li);
+});
+function jump(id) {
+  if (id === "overlay") { st.connected = true; st.overlay = { kind: "turn", delta: 3, at: now() + 2500 }; st.screen = "overlay"; st.t0 = now(); syncUI(); return; }
+  if (id === "linked") st.connected = true;
+  if (id === "lost" || id === "awaiting") st.connected = false;
+  if (id === "layer" || id === "ambient") st.connected = true;
+  go(id, { flash: id === "boot" });
+}
+function syncUI() {
+  const cur = SCREENS.find(s => s.id === st.screen) || SCREENS[0];
+  pick.querySelectorAll("button").forEach(b => b.setAttribute("aria-current", String(b.dataset.id === cur.id)));
+  detail.innerHTML = `<h3>${cur.name}</h3>
+    <div class="row"><b>Shows</b><span>${cur.when}</span></div>
+    <div class="row"><b>Refresh</b><span>${cur.refresh}</span></div>
+    <p class="note">${cur.note}</p>`;
+  linkBtn.textContent = st.connected ? "Mac: disconnect" : "Mac: connect";
+}
+
+document.addEventListener("keydown", e => {
+  if (e.target.closest("select,input")) return;
+  if (e.key >= "1" && e.key <= "8") { pressKey(+e.key - 1); e.preventDefault(); }
+  else if (e.key === "ArrowRight") { turn(1); e.preventDefault(); }
+  else if (e.key === "ArrowLeft") { turn(-1); e.preventDefault(); }
+  else if (e.key === " ") { push(); e.preventDefault(); }
+  else if (e.key.toLowerCase() === "a") jump("ambient");
+});
+
+syncKeys(); syncUI();
+requestAnimationFrame(loop);
+})();
+</script>
