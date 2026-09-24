@@ -49,13 +49,12 @@ constexpr uint8_t EPD_PIN_MISO_UNUSED = 35;
 constexpr uint8_t EPD_ROTATION = 1;
 // ---- Refresh policy (wear + ghosting) ----
 // Panel is rated ~1,000,000 refreshes; the boot log shows the running total.
-// Full (flashing) refreshes clear ghosting. They happen after big screen
-// changes (boot, link screens, host switch, leaving the wave), once when the
-// pad has sat untouched for a while, and as a rare safety net during use.
+// Full (flashing) refreshes clear ghosting. They happen when the whole picture
+// changes (new screen, layer switch, menu open or close), once when the pad
+// has sat untouched for a while, and as a rare safety net during use.
 constexpr uint32_t EPD_FULL_REFRESH_EVERY = 100;     // safety net: partials in a row
 constexpr uint32_t EPD_IDLE_CLEAN_AFTER   = 5;       // ...and at least this many partials built up
 constexpr uint32_t EPD_IDLE_CLEAN_MS      = 120000;  // untouched this long -> one full clean
-constexpr bool     EPD_FULL_ON_LAYER_SWITCH = false; // true = no layer ghosting, but flash + ~2 s per switch
 constexpr uint32_t EPD_POWER_OFF_MS       = 1000;    // cut panel high voltage this long after a refresh
 
 // ---------------- UI timing ----------------

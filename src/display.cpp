@@ -364,13 +364,8 @@ void task(void*) {
   uint32_t lastRev = 0, lastDraw = 0, partials = 0;
   ui::Screen lastScreen = ui::Screen::Boot;
   uint8_t lastLayer = 0;
+  ui::Menu lastMenu = ui::Menu::None;
   bool first = true, wasAnimating = false, powered = false;
-
-  // Screens with big bold graphics: the next screen after one gets a full refresh.
-  auto heavy = [](ui::Screen sc) {
-    return sc == ui::Screen::Boot || sc == ui::Screen::Ambient || sc == ui::Screen::Linked ||
-           sc == ui::Screen::Switching;
-  };
 
   for (;;) {
     const ui::Snapshot s = ui::snapshot();
@@ -385,12 +380,11 @@ void task(void*) {
     if (s.screen == ui::Screen::Boot && (s.fastBoot || bootFinished(s))) { ui::bootDone(); vTaskDelay(1); continue; }
 
     if (first || changed || due || settle || idleClean) {
-      const bool layerSwitch = s.screen == ui::Screen::Layer && lastScreen == ui::Screen::Layer && s.layer != lastLayer;
-      const bool full = first || idleClean || partials >= EPD_FULL_REFRESH_EVERY ||
-                        (s.screen != lastScreen && heavy(lastScreen)) ||
+      // A partial refresh over a whole new picture leaves the old one showing through.
+      const bool wholeScreen = s.screen != lastScreen || s.layer != lastLayer || s.menu != lastMenu;
+      const bool full = first || idleClean || partials >= EPD_FULL_REFRESH_EVERY || wholeScreen ||
                         (settle && s.screen == ui::Screen::Ambient) ||
-                        (s.screen == ui::Screen::Ambient && partials >= AMBIENT_FULL_EVERY) ||
-                        (layerSwitch && EPD_FULL_ON_LAYER_SWITCH);
+                        (s.screen == ui::Screen::Ambient && partials >= AMBIENT_FULL_EVERY);
       render(s);
       epd.display(!full);
       powered = true;
@@ -401,6 +395,7 @@ void task(void*) {
       lastDraw = g_frame;
       lastScreen = s.screen;
       lastLayer = s.layer;
+      lastMenu = s.menu;
     }
     wasAnimating = anim != 0;
 
