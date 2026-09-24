@@ -21,6 +21,11 @@ class HidOutput {
   void typeText(const char* text);              // '\n' = Enter
   void printInfo();                             // BT address, bonded hosts, link state
   void forgetAll();                             // clear bonds + drop current link
+
+  // Host slots
+  uint8_t hostSlot() const;                     // 0..NUM_HOSTS-1
+  const char* deviceName() const;               // what computers see, e.g. "SpaceDeck HOST2"
+  void switchHost(uint8_t slot);                // saves the slot and restarts (takes ~2 s)
 };
 
 extern HidOutput hid;

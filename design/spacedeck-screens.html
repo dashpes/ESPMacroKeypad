@@ -51,6 +51,11 @@ canvas#epd{display:block;width:100%;height:auto;image-rendering:pixelated;border
   box-shadow:0 3px 0 var(--shell-edge),0 0 0 1px rgba(0,0,0,.35);font:600 12px var(--mono);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
   transition:transform .06s, box-shadow .06s;padding:4px;min-width:0}
 .key small{font-weight:400;font-size:10px;opacity:.6}
+.key{position:relative;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.key .fill{position:absolute;left:0;bottom:0;height:3px;width:0;background:var(--accent);pointer-events:none}
+.key.holding .fill{width:100%;transition:width .6s linear}
+.key.held .fill{width:100%;height:100%;opacity:.25;transition:none}
+.key > span,.key > small{position:relative;pointer-events:none}
 .key:active,.key.down{transform:translateY(3px);box-shadow:0 0 0 var(--shell-edge),0 0 0 1px rgba(0,0,0,.35)}
 .key:focus-visible,.knob button:focus-visible,.ctl:focus-visible,.pick button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .knobrow{display:flex;align-items:center;justify-content:flex-end;gap:14px;margin-top:16px;flex-wrap:wrap}
@@ -84,6 +89,7 @@ canvas#epd{display:block;width:100%;height:auto;image-rendering:pixelated;border
 .card h4{margin:0 0 6px;font:700 13px var(--mono);letter-spacing:.06em}
 .card p{margin:0;font-size:14px;color:var(--muted)}
 .card code{font-family:var(--mono);font-size:12.5px;color:var(--ink);background:var(--chip);padding:1px 5px;border-radius:3px}
+.macout{font:500 12.5px var(--mono);color:#c9d0cd;margin:14px 0 0;min-height:1.4em;overflow-wrap:anywhere}
 .hint{font:12px var(--mono);color:var(--muted);margin-top:14px}
 kbd{font:600 11px var(--mono);background:var(--chip);border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px}
 </style>
@@ -117,7 +123,8 @@ kbd{font:600 11px var(--mono);background:var(--chip);border:1px solid var(--line
           <button class="linkbtn" id="bootbtn">Replay boot</button>
         </div>
       </div>
-      <p class="hint" style="color:#8a9491">Keys <kbd>1</kbd>–<kbd>8</kbd> · knob <kbd>←</kbd> <kbd>→</kbd> · push <kbd>Space</kbd> · idle <kbd>A</kbd></p>
+      <p class="macout" id="macout" aria-live="polite">Mac received: —</p>
+      <p class="hint" style="color:#8a9491">Keys <kbd>1</kbd>–<kbd>8</kbd> (hold for long-press) · knob <kbd>←</kbd> <kbd>→</kbd> · push <kbd>Space</kbd> (hold = hosts) · idle <kbd>A</kbd></p>
     </section>
 
     <aside class="panel">
@@ -136,6 +143,8 @@ kbd{font:600 11px var(--mono);background:var(--chip);border:1px solid var(--line
     <div class="card"><h4>Labels line up with the keys</h4><p>The screen is split into a 2 × 4 grid, 61 px per cell, so each label sits right above its key. The small number tag in each corner matches the key under it.</p></div>
     <div class="card"><h4>Only what changed redraws</h4><p>A key press inverts one cell; a layer switch redraws the grid; the header stays put. Every partial redraw leaves a faint ghost of the old image, so the firmware does a full, flashing refresh at boot and every ~50 partial updates to clear it.</p></div>
     <div class="card"><h4>The knob shows steps, not a level</h4><p>The popup opens on the right edge, pointing at the knob beside the screen, and the header's <code>KNOB:</code> label sits on that side too. SpaceDeck only sends “volume up” and “volume down”, so the popup counts clicks (<code>+3</code>) instead of guessing the Mac’s volume. It closes 1.5 s after the last click.</p></div>
+    <div class="card"><h4>Tap vs. hold</h4><p>Keys with a dot in their corner have a long-press action (hold ~0.6 s): <code>8</code> jumps to the ambient wave, <code>SIG</code> opens the snippet menu. Those keys fire their tap on release; every other key fires the instant you press it.</p></div>
+    <div class="card"><h4>Several computers</h4><p>Hold the knob for the HOSTS menu. Each slot is paired to one computer and appears in its Bluetooth list as its own device. The active slot is shown in the top bar, e.g. <code>WORK KNOB:VOL</code>.</p></div>
     <div class="card"><h4>Ambient mode</h4><p>After 5 min with no input. The wave is generated on the pad. Making it follow your music would need a small I2S mic or a Mac helper app sending levels over Bluetooth. The first key press only wakes the screen, so it never fires a shortcut by accident.</p></div>
   </div>
 </div>
@@ -188,15 +197,17 @@ const G = {
  "'":["..#..","..#..",".#...",".....",".....",".....","....."],"`":["#....",".#...","..#..",".....",".....",".....","....."],
  "^":["..#..",".###.","#.#.#","..#..","..#..","..#..","..#.."],"~":["..#..","..#..","..#..","..#..","#.#.#",".###.","..#.."]
 };
-const text = (s, x, y, sc, v) => {
+// adv = pixels per character (default 6 x scale); 5-letter key labels use one less to clear the cell borders
+const text = (s, x, y, sc, v, adv) => {
+  adv = adv || 6 * sc;
   for (const ch of s.toUpperCase()) {
     const g = G[ch] || G["?"];
     for (let r = 0; r < 7; r++) for (let c = 0; c < 5; c++) if (g[r][c] === "#") rect(x + c * sc, y + r * sc, sc, sc, v);
-    x += 6 * sc;
+    x += adv;
   }
 };
-const tw = (s, sc) => s.length * 6 * sc - sc;
-const ctext = (s, cx, y, sc, v) => text(s, Math.round(cx - tw(s, sc) / 2), y, sc, v);
+const tw = (s, sc, adv) => s.length ? (s.length - 1) * (adv || 6 * sc) + 5 * sc : 0;
+const ctext = (s, cx, y, sc, v, adv) => text(s, Math.round(cx - tw(s, sc, adv) / 2), y, sc, v, adv);
 const icon = (rows, x, y, v) => rows.forEach((r, j) => [...r].forEach((c, i) => { if (c === "#") px(x + i, y + j, v); }));
 const arc = (cx, cy, r, a0, a1, v, dash) => { let n = 0; for (let a = a0; a <= a1; a += 0.6 / r) { n++; if (dash && n % 4 < 2) continue; px(Math.round(cx + r * Math.cos(a)), Math.round(cy + r * Math.sin(a)), v); } };
 const ellipse = (cx, cy, rx, ry, v, dash) => { let n = 0; for (let a = 0; a < Math.PI * 2; a += 0.8 / Math.max(rx, ry)) { n++; if (dash && n % 5 < 2) continue; px(Math.round(cx + rx * Math.cos(a)), Math.round(cy + ry * Math.sin(a)), v); } };
@@ -206,12 +217,29 @@ const BT = ["..#..","..##.","#.#.#",".###.","..#..",".###.","#.#.#","..##.","..#
 // ======================================================================
 //  Keymap (mirrors src/actions.cpp)
 // ======================================================================
+// keys: [label, small line, what the Mac receives]; holds: long-press actions
 const LAYERS = [
-  { name: "MEDIA", knob: "VOL", knobName: "VOLUME",
-    keys: [["PLAY","PAUSE"],["PREV","TRACK"],["NEXT","TRACK"],["MUTE","AUDIO"],["COPY","CMD+C"],["PASTE","CMD+V"],["SHOT","CMD+SH+4"],["DEV>","LAYER"]] },
-  { name: "DEV", knob: "TABS", knobName: "TABS",
-    keys: [["SAVE","CMD+S"],["FIND","CMD+F"],["TERM","CTRL+`"],["CMT","CMD+/"],["UNDO","CMD+Z"],["REDO","CMD+SH+Z"],["SIG","TYPE TEXT"],["MED>","LAYER"]] },
+  { name: "MEDIA", knob: "VOL", knobName: "VOLUME", cw: "VOL+", ccw: "VOL-", push: "MUTE",
+    keys: [["PLAY","PAUSE","Play/Pause"],["PREV","TRACK","Previous track"],["NEXT","TRACK","Next track"],["SPOT","CMD+SPACE","⌘Space (Spotlight)"],
+           ["COPY","CMD+C","⌘C"],["PASTE","CMD+V","⌘V"],["SHOT","CMD+SH+4","⌘⇧4"],["DEV>","LAYER",null]],
+    holds: [null,null,null,null,null,null,null,"ambient"] },
+  { name: "DEV", knob: "TABS", knobName: "TABS", cw: "TAB>", ccw: "<TAB", push: null,
+    keys: [["SAVE","CMD+S","⌘S"],["FIND","CMD+F","⌘F"],["TERM","CTRL+`","⌃`"],["CMT","CMD+/","⌘/"],
+           ["UNDO","CMD+Z","⌘Z"],["REDO","CMD+SH+Z","⌘⇧Z"],["SIG","*snippet",null],["MED>","LAYER",null]],
+    holds: [null,null,null,null,null,null,"menu","ambient"] },
 ];
+// mirrors SNIPPETS in src/actions.cpp
+const SNIPPETS = [
+  ["Thanks",  "Thanks,\nDaniel"],
+  ["Best",    "Best,\nDaniel"],
+  ["LGTM",    "LGTM, approving."],
+  ["On it",   "On it, will follow up shortly."],
+  ["Standup", "Yesterday: \nToday: \nBlockers: none"],
+];
+const HOLD_MS = 600, KNOB_HOLD_MS = 800, MENU_MS = 10000;
+// mirrors HOST_NAMES in config.h
+const HOST_NAMES = ["HOME", "WORK", "MINI"];  // Personal Mac, Work Mac, Mac Mini
+const subLabel = (k) => k[1] === "*snippet" ? SNIPPETS[st.snip][0].toUpperCase().slice(0, 9) : k[1];
 
 const SCREENS = [
   { id: "boot",     name: "Boot",             rf: "FULL",
@@ -232,9 +260,18 @@ const SCREENS = [
   { id: "overlay",  name: "Knob popup",       rf: "PARTIAL",
     when: "Turning or pushing the knob.", refresh: "Partial, closes 1.5 s after the last click",
     note: "Counts clicks in each direction. It can't show the Mac's actual volume, which the pad never receives." },
+  { id: "hosts",    name: "Hosts menu",       rf: "PARTIAL",
+    when: "Hold the knob (~0.8 s), any layer.", refresh: "Partial per knob click; closes after 10 s untouched",
+    note: "One slot per computer; each shows up as its own Bluetooth device (SpaceDeck HOME, WORK, MINI). Push to switch: about 2 s, and that computer reconnects on its own. * marks the active slot." },
+  { id: "switching", name: "Switching host",  rf: "PARTIAL",
+    when: "After picking another host.", refresh: "Partial, then the radio restarts",
+    note: "Skips the boot animation and goes straight to the link screens for the new host." },
+  { id: "menu",     name: "Snippet menu",     rf: "PARTIAL",
+    when: "Hold SIG (Dev layer, key 7).", refresh: "Partial per knob click; closes after 10 s untouched",
+    note: "Knob scrolls, push types the snippet and makes it the default for taps. Any key cancels. Your pick survives a power cycle." },
   { id: "ambient",  name: "Ambient wave",     rf: "1–2 FPS",
     when: "5 minutes with no input.", refresh: "Partial at 1–2 fps; a full refresh every few minutes",
-    note: "Generated on the pad. The first key press only wakes the screen." },
+    note: "Generated on the pad. Hold key 8 to jump here. The first key press only wakes the screen." },
 ];
 
 // ======================================================================
@@ -245,6 +282,9 @@ const st = {
   pressed: -1, pressedAt: 0,
   overlay: null,            // {kind:'turn'|'push', delta, at}
   bootAfter: "layer",
+  menu: null,               // {kind:'snip'|'host', index, at}
+  host: 0, switchTo: 0,
+  snip: 0,
   flashUntil: 0,
 };
 const now = () => performance.now();
@@ -313,10 +353,10 @@ function drawAwaiting() {
   rect(28, 64, 4, 4, PAPER);
   for (let i = 1; i <= 3; i++) if (phase >= i) arc(30, 66, 8 + i * 9, -0.9, 0.9, PAPER);
   text("AWAITING LINK", 76, 30, 2, PAPER);
-  text("PAIR FROM YOUR MAC:", 76, 56, 1, PAPER);
+  text("PAIR FROM YOUR COMPUTER:", 76, 56, 1, PAPER);
   text("SETTINGS > BLUETOOTH", 76, 70, 1, PAPER);
-  rect(74, 82, tw("> SPACEDECK", 1) + 4, 11, PAPER);
-  text("> SPACEDECK", 76, 84, 1, INK);
+  rect(74, 82, tw("> SPACEDECK " + HOST_NAMES[st.host], 1) + 4, 11, PAPER);
+  text("> SPACEDECK " + HOST_NAMES[st.host], 76, 84, 1, INK);
   text("KEYS INACTIVE UNTIL PAIRED", 76, 104, 1, PAPER);
 }
 
@@ -342,8 +382,9 @@ function drawLost() {
 }
 
 function drawLayer() {
+  if (st.menu) { drawMenu(); return; }
   const L = LAYERS[st.layer];
-  header(L.name, "KNOB:" + L.knob + " [" + (st.layer + 1) + "/" + LAYERS.length + "]", st.connected ? "on" : "off");
+  header(L.name, HOST_NAMES[st.host] + " KNOB:" + L.knob + " [" + (st.layer + 1) + "/" + LAYERS.length + "]", st.connected ? "on" : "off");
   for (let i = 0; i < 8; i++) {
     const c = i % 4, r = Math.floor(i / 4);
     const x = 1 + c * 62, y = 16 + r * 53, w = 61, h = 52;
@@ -352,11 +393,36 @@ function drawLayer() {
     if (down) rect(x, y, w, h, PAPER); else frame(x, y, w, h, PAPER);
     rect(x, y, 9, 9, down ? INK : PAPER);
     text(String(i + 1), x + 2, y + 1, 1, down ? PAPER : INK);
-    const [main, sub] = L.keys[i];
-    ctext(main, x + 30.5, y + 17, 2, fg);
+    if (L.holds[i]) rect(x + w - 5, y + 2, 3, 3, fg);   // has a long-press action
+    const main = L.keys[i][0], sub = subLabel(L.keys[i]);
+    ctext(main, x + 30.5, y + 17, 2, fg, main.length >= 5 ? 11 : 0);
     ctext(sub, x + 30.5, y + 38, 1, fg);
   }
 
+}
+
+function drawMenu() {
+  const hosts = st.menu.kind === "host";
+  header(hosts ? "HOSTS" : "SNIPPETS", hosts ? "KNOB:SCROLL PUSH:SWITCH" : "KNOB:SCROLL PUSH:SEND", st.connected ? "on" : "off");
+  const items = hosts ? HOST_NAMES.map((h, i) => [(i + 1) + " " + h + (i === st.host ? " *" : ""),
+                          (i === st.host ? "ACTIVE SLOT (*)" : "PUSH TO SWITCH (ABOUT 2 S)") + "\nPAIRS AS: SPACEDECK " + h])
+                     : SNIPPETS;
+  const ROWS = 4, ROW_H = 19, TOP = 17, n = items.length, sel = st.menu.index;
+  const first = Math.max(0, Math.min(sel - 1, n - ROWS));
+  for (let r = 0; r < ROWS && first + r < n; r++) {
+    const i = first + r, y = TOP + r * ROW_H, on = i === sel;
+    if (on) rect(0, y, 242, ROW_H - 1, PAPER);
+    text(on ? ">" : " ", 4, y + 2, 2, on ? INK : PAPER);
+    text(items[i][0].slice(0, 18), 18, y + 2, 2, on ? INK : PAPER);
+  }
+  for (let y = TOP; y < TOP + ROWS * ROW_H - 1; y += 2) px(246, y, PAPER);
+  const trackH = ROWS * ROW_H - 1, thumbH = Math.max(6, Math.floor(trackH * Math.min(n, ROWS) / n));
+  rect(245, TOP + (n > 1 ? Math.floor((trackH - thumbH) * sel / (n - 1)) : 0), 3, thumbH, PAPER);
+  hdots(TOP + ROWS * ROW_H + 1, 0, W - 1, PAPER);
+  const lines = items[sel][1].split("\n");
+  text(lines[0].slice(0, 40), 3, 99, 1, PAPER);
+  if (lines[1] !== undefined) text(lines[1].slice(0, 40), 3, 111, 1, PAPER);
+  if (lines.length > 2) text("...", 247 - tw("...", 1), 111, 1, PAPER);
 }
 
 function drawOverlay() {
@@ -365,12 +431,12 @@ function drawOverlay() {
   if (!o) return;
   const L = LAYERS[st.layer];
   // anchored to the right edge, centred on the screen: the knob sits just to the right
-  const w = 194, h = 72, x = W - w - 8, y = 64 - h / 2;
+  const w = 194, h = 72, x = W - w - 8, y = 61 - h / 2;  // knob centre = screen centre (y 61)
   rect(x - 2, y - 2, w + 4, h + 4, INK);
   rect(x, y, w, h, PAPER);
   frame(x + 2, y + 2, w - 4, h - 4, INK);
   // pointer toward the knob
-  for (let i = 0; i < 6; i++) rect(x + w + i, 64 - (5 - i), 1, (5 - i) * 2 + 1, PAPER);
+  for (let i = 0; i < 6; i++) rect(x + w + i, 61 - (5 - i), 1, (5 - i) * 2 + 1, PAPER);
   text(L.knobName, x + 10, y + 9, 1, INK);
   if (o.kind === "push") {
     const label = st.layer === 0 ? "MUTE" : "---";
@@ -380,7 +446,7 @@ function drawOverlay() {
     const d = Math.max(-8, Math.min(8, o.delta));
     const s = (o.delta > 0 ? "+" : "") + o.delta;
     text(s, x + w - 10 - tw(s, 3), y + 6, 3, INK);
-    const dir = o.delta > 0 ? (st.layer === 0 ? "RAISING" : "NEXT TAB") : (st.layer === 0 ? "LOWERING" : "PREV TAB");
+    const dir = o.delta > 0 ? L.cw : L.ccw;
     text(dir, x + 10, y + 21, 1, INK);
     // step meter: 17 ticks, centre = 0
     const tx0 = x + 14, ty = y + 42;
@@ -425,7 +491,15 @@ function drawAmbient() {
   text(LAYERS[st.layer].name + " READY", 247 - tw(LAYERS[st.layer].name + " READY", 1), 113, 1, PAPER);
 }
 
-const DRAW = { boot: drawBoot, awaiting: drawAwaiting, linked: drawLinked, lost: drawLost, layer: drawLayer, overlay: drawOverlay, ambient: drawAmbient };
+function drawSwitching() {
+  header("HOST", "", "off");
+  ctext("SWITCHING TO", 125, 30, 2, PAPER);
+  ctext(HOST_NAMES[st.switchTo], 125, 54, 3, PAPER);
+  hdots(84, 60, 190, PAPER, 3);
+  ctext("RESTARTING BLUETOOTH...", 125, 94, 1, PAPER);
+  if (since() > 2.2) { st.host = st.switchTo; st.connected = true; go("linked"); }
+}
+const DRAW = { switching: drawSwitching, boot: drawBoot, awaiting: drawAwaiting, linked: drawLinked, lost: drawLost, layer: drawLayer, overlay: drawOverlay, ambient: drawAmbient };
 
 // ======================================================================
 //  Render to canvas (e-paper colours, optional pixel grid)
@@ -455,6 +529,7 @@ let lastPaint = 0;
 function loop(ts) {
   const epaper = document.getElementById("epaper").checked;
   const interval = epaper ? (st.screen === "ambient" ? 600 : 90) : 33;
+  if (st.menu && now() - st.menu.at > MENU_MS) { st.menu = null; syncUI(); }
   if (ts - lastPaint >= interval) {
     lastPaint = ts;
     fb.fill(INK);
@@ -472,40 +547,124 @@ const keyBtns = [];
 for (let i = 0; i < 8; i++) {
   const b = document.createElement("button");
   b.className = "key"; b.type = "button";
-  b.addEventListener("click", () => pressKey(i));
+  b.addEventListener("pointerdown", e => {
+    if (e.button > 0) return;
+    e.preventDefault();
+    try { b.setPointerCapture(e.pointerId); } catch (_) {}
+    keyDown(i);
+  });
+  b.addEventListener("pointerup", () => keyUp(i));
+  // a cancelled pointer (the browser grabbed the gesture) must not count as a tap
+  b.addEventListener("pointercancel", () => keyUp(i, true));
+  b.addEventListener("contextmenu", e => e.preventDefault());
+  b.addEventListener("dragstart", e => e.preventDefault());
+  b.addEventListener("keydown", e => { if ((e.key === "Enter" || e.key === " ") && !e.repeat) { e.preventDefault(); e.stopPropagation(); keyDown(i); } });
+  b.addEventListener("keyup", e => { if (e.key === "Enter" || e.key === " ") { e.stopPropagation(); keyUp(i); } });
   keysEl.appendChild(b); keyBtns.push(b);
 }
 function syncKeys() {
-  LAYERS[st.layer].keys.forEach(([m, s], i) => {
-    keyBtns[i].innerHTML = `<span>${i + 1}</span><small>${m.toLowerCase()}</small>`;
-    keyBtns[i].setAttribute("aria-label", `Key ${i + 1}: ${m} ${s}`);
+  const L = LAYERS[st.layer];
+  L.keys.forEach((k, i) => {
+    const hold = L.holds[i] ? (L.holds[i] === "menu" ? " · hold: menu" : " · hold: wave") : "";
+    keyBtns[i].innerHTML = `<i class="fill" aria-hidden="true"></i><span>${i + 1}</span><small>${k[0].toLowerCase()}${hold}</small>`;
+    keyBtns[i].setAttribute("aria-label", `Key ${i + 1}: ${k[0]} ${subLabel(k)}${hold}`);
   });
 }
 
-function pressKey(i) {
-  keyBtns[i].classList.add("down"); setTimeout(() => keyBtns[i].classList.remove("down"), 120);
-  if (st.screen === "ambient") { go("layer"); return; }                 // first press only wakes
-  if (!["layer", "overlay"].includes(st.screen)) return;                  // keys inactive on link screens
-  if (i === 7) { st.layer = (st.layer + 1) % LAYERS.length; syncKeys(); go("layer"); }
-  else { st.pressed = i; st.pressedAt = now(); if (st.screen === "overlay") go("layer"); }
+// what the Mac receives, shown under the device
+const macOut = document.getElementById("macout");
+function send(desc) { macOut.textContent = "Mac received: " + desc; }
+
+function fireTap(i) {
+  const L = LAYERS[st.layer], k = L.keys[i];
+  if (i === 7) { st.layer = (st.layer + 1) % LAYERS.length; syncKeys(); go("layer"); return; }
+  if (k[1] === "*snippet") { send("typed “" + SNIPPETS[st.snip][1].replace(/\n/g, " ⏎ ") + "”"); return; }
+  send(k[2]);
 }
+function fireHold(i) {
+  const h = LAYERS[st.layer].holds[i];
+  if (h === "ambient") go("ambient");
+  if (h === "menu") { st.menu = { kind: "snip", index: st.snip, at: now() }; st.overlay = null; if (st.screen !== "layer") go("layer"); syncUI(); }
+}
+
+const held = {};   // per key: {since, swallowed, holdFired, timer}
+function keyDown(i) {
+  if (held[i]) return;
+  keyBtns[i].classList.add("down");
+  keyBtns[i].classList.remove("holding", "held");
+  const k = held[i] = { swallowed: false, holdFired: false, timer: 0 };
+  if (st.menu) { st.menu = null; k.swallowed = true; syncUI(); return; }         // any key cancels the menu
+  if (st.screen === "ambient") { go("layer"); k.swallowed = true; return; }    // first press only wakes
+  if (!["layer", "overlay"].includes(st.screen)) { k.swallowed = true; return; } // keys inactive on link screens
+  st.pressed = i; st.pressedAt = now(); if (st.screen === "overlay") go("layer");
+  if (!LAYERS[st.layer].holds[i]) { fireTap(i); return; }                       // no hold action: fire right away
+  void keyBtns[i].offsetWidth;                  // restart the progress bar
+  keyBtns[i].classList.add("holding");
+  k.timer = setTimeout(() => {
+    if (held[i] !== k) return;
+    k.holdFired = true;
+    keyBtns[i].classList.replace("holding", "held");
+    fireHold(i);
+  }, HOLD_MS);
+}
+function keyUp(i, cancelled) {
+  const k = held[i]; if (!k) return;
+  delete held[i]; clearTimeout(k.timer);
+  keyBtns[i].classList.remove("down", "holding", "held");
+  if (!cancelled && !k.swallowed && !k.holdFired && LAYERS[st.layer].holds[i]) fireTap(i);    // short press on a hold key
+}
+function pressKey(i) { keyDown(i); setTimeout(() => keyUp(i), 90); }
+
 function turn(dir) {
+  if (st.menu) { const n = st.menu.kind === "host" ? HOST_NAMES.length : SNIPPETS.length; st.menu.index = ((st.menu.index + dir) % n + n) % n; st.menu.at = now(); return; }
   if (st.screen === "ambient") { go("layer"); return; }
   if (!["layer", "overlay"].includes(st.screen)) return;
+  send(dir > 0 ? LAYERS[st.layer].cw : LAYERS[st.layer].ccw);
   const o = st.overlay;
   const delta = o && o.kind === "turn" && Math.sign(o.delta) === dir ? o.delta + dir : dir;
   st.overlay = { kind: "turn", delta, at: now() };
   if (st.screen !== "overlay") { st.screen = "overlay"; st.t0 = now(); syncUI(); }
 }
 function push() {
+  if (st.menu && st.menu.kind === "host") {
+    const i = st.menu.index; st.menu = null;
+    if (i !== st.host) { st.switchTo = i; go("switching"); send("nothing: switching Bluetooth host"); } else syncUI();
+    return;
+  }
+  if (st.menu) { st.snip = st.menu.index; st.menu = null; syncKeys(); syncUI(); fireTap(6); return; }
   if (st.screen === "ambient") { go("layer"); return; }
   if (!["layer", "overlay"].includes(st.screen)) return;
+  send(LAYERS[st.layer].push || "nothing (no knob push on this layer)");
   st.overlay = { kind: "push", delta: 0, at: now() };
   if (st.screen !== "overlay") { st.screen = "overlay"; st.t0 = now(); syncUI(); }
 }
 document.getElementById("cw").addEventListener("click", () => turn(1));
 document.getElementById("ccw").addEventListener("click", () => turn(-1));
-document.getElementById("press").addEventListener("click", push);
+const pressBtn = document.getElementById("press");
+let knobHold = null;
+function knobDown() {
+  if (knobHold) return;
+  if (st.menu || st.screen === "ambient") { push(); knobHold = { swallowed: true }; return; }   // select / wake only
+  const k = knobHold = { swallowed: false, fired: false, timer: 0 };
+  k.timer = setTimeout(() => {
+    if (knobHold !== k || !["layer", "overlay"].includes(st.screen)) return;
+    k.fired = true; st.overlay = null;
+    st.menu = { kind: "host", index: st.host, at: now() };
+    if (st.screen !== "layer") go("layer"); syncUI();
+  }, KNOB_HOLD_MS);
+}
+function knobUp(cancelled) {
+  const k = knobHold; knobHold = null; if (!k) return;
+  clearTimeout(k.timer);
+  if (!cancelled && !k.swallowed && !k.fired) push();
+}
+pressBtn.style.touchAction = "none";
+pressBtn.addEventListener("pointerdown", e => { if (e.button > 0) return; e.preventDefault(); try { pressBtn.setPointerCapture(e.pointerId); } catch (_) {} knobDown(); });
+pressBtn.addEventListener("pointerup", () => knobUp());
+pressBtn.addEventListener("pointercancel", () => knobUp(true));
+pressBtn.addEventListener("contextmenu", e => e.preventDefault());
+pressBtn.addEventListener("keydown", e => { if ((e.key === "Enter" || e.key === " ") && !e.repeat) { e.preventDefault(); e.stopPropagation(); knobDown(); } });
+pressBtn.addEventListener("keyup", e => { if (e.key === "Enter" || e.key === " ") { e.stopPropagation(); knobUp(); } });
 
 const linkBtn = document.getElementById("linkbtn");
 linkBtn.addEventListener("click", () => {
@@ -525,6 +684,10 @@ SCREENS.forEach(s => {
   li.appendChild(b); pick.appendChild(li);
 });
 function jump(id) {
+  st.menu = null;
+  if (id === "menu") { st.connected = true; st.layer = 1; syncKeys(); go("layer"); fireHold(6); return; }
+  if (id === "hosts") { st.connected = true; go("layer"); st.menu = { kind: "host", index: (st.host + 1) % HOST_NAMES.length, at: now() }; syncUI(); return; }
+  if (id === "switching") { st.switchTo = (st.host + 1) % HOST_NAMES.length; }
   if (id === "overlay") { st.connected = true; st.overlay = { kind: "turn", delta: 3, at: now() + 2500 }; st.screen = "overlay"; st.t0 = now(); syncUI(); return; }
   if (id === "linked") st.connected = true;
   if (id === "lost" || id === "awaiting") st.connected = false;
@@ -532,7 +695,7 @@ function jump(id) {
   go(id, { flash: id === "boot" });
 }
 function syncUI() {
-  const cur = SCREENS.find(s => s.id === st.screen) || SCREENS[0];
+  const cur = SCREENS.find(s => s.id === (st.menu ? (st.menu.kind === "host" ? "hosts" : "menu") : st.screen)) || SCREENS[0];
   pick.querySelectorAll("button").forEach(b => b.setAttribute("aria-current", String(b.dataset.id === cur.id)));
   detail.innerHTML = `<h3>${cur.name}</h3>
     <div class="row"><b>Shows</b><span>${cur.when}</span></div>
@@ -543,12 +706,14 @@ function syncUI() {
 
 document.addEventListener("keydown", e => {
   if (e.target.closest("select,input")) return;
-  if (e.key >= "1" && e.key <= "8") { pressKey(+e.key - 1); e.preventDefault(); }
+  if (e.key >= "1" && e.key <= "8") { if (!e.repeat) keyDown(+e.key - 1); e.preventDefault(); }
   else if (e.key === "ArrowRight") { turn(1); e.preventDefault(); }
   else if (e.key === "ArrowLeft") { turn(-1); e.preventDefault(); }
-  else if (e.key === " ") { push(); e.preventDefault(); }
+  else if (e.key === " ") { if (!e.repeat) knobDown(); e.preventDefault(); }
   else if (e.key.toLowerCase() === "a") jump("ambient");
 });
+document.addEventListener("keyup", e => { if (e.key >= "1" && e.key <= "8") keyUp(+e.key - 1); if (e.key === " ") knobUp(); });
+window.addEventListener("blur", () => Object.keys(held).forEach(i => keyUp(+i, true)));
 
 syncKeys(); syncUI();
 requestAnimationFrame(loop);

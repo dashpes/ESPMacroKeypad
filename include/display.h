@@ -5,5 +5,6 @@
 #include <Arduino.h>
 
 namespace display {
-void begin();   // starts the render task; safe to call with no screen attached
+void begin();              // starts the render task; safe to call with no screen attached
+uint32_t refreshCount();   // lifetime panel refreshes (rated ~1,000,000)
 }

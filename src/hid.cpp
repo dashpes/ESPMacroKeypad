@@ -8,6 +8,8 @@
 #include <BLEServer.h>
 #include <BLESecurity.h>
 #include <esp_gap_ble_api.h>
+#include <esp_system.h>
+#include <Preferences.h>
 
 HidOutput hid;
 
@@ -62,6 +64,8 @@ BLECharacteristic* g_mediaIn = nullptr;
 volatile bool g_connected = false;
 volatile bool g_linkChanged = false;
 volatile bool g_needAdvertise = false;
+uint8_t g_slot = 0;
+char g_name[32] = "";
 esp_bd_addr_t g_peer = {0};
 
 class ServerCallbacks : public BLEServerCallbacks {
@@ -188,7 +192,23 @@ bool ready(const char* what) {
 }  // namespace
 
 void HidOutput::begin() {
-  BLEDevice::init(BLE_DEVICE_NAME);
+  // Host slot: each slot gets its own Bluetooth address, so every computer
+  // pairs with a separate "device". Slot 0 keeps the factory address, so the
+  // pairing you already have keeps working. Must run before BLE starts.
+  Preferences prefs;
+  prefs.begin("spacedeck", true);
+  g_slot = prefs.getUChar("host", 0);
+  prefs.end();
+  if (g_slot >= NUM_HOSTS) g_slot = 0;
+  if (g_slot > 0) {
+    uint8_t mac[6];
+    esp_efuse_mac_get_default(mac);
+    mac[5] = (uint8_t)(mac[5] + g_slot * 4);   // each base address uses +0..+3 (WiFi, AP, BT, Eth)
+    esp_base_mac_addr_set(mac);
+  }
+  snprintf(g_name, sizeof g_name, "%s %s", BLE_DEVICE_NAME, HOST_NAMES[g_slot]);
+
+  BLEDevice::init(g_name);
   g_server = BLEDevice::createServer();
   g_server->setCallbacks(new ServerCallbacks());
 
@@ -218,7 +238,7 @@ void HidOutput::begin() {
   adv->setScanResponse(false);
   adv->start();
 
-  Serial.printf("[hid] advertising as \"%s\" - pair it from Mac Bluetooth settings\n", BLE_DEVICE_NAME);
+  Serial.printf("[hid] host slot %u/%u - advertising as \"%s\"\n", g_slot + 1, NUM_HOSTS, g_name);
   printInfo();
 }
 
@@ -269,6 +289,20 @@ LinkEvent HidOutput::poll() {
 }
 
 bool HidOutput::connected() const { return g_connected; }
+
+uint8_t HidOutput::hostSlot() const { return g_slot; }
+const char* HidOutput::deviceName() const { return g_name; }
+
+void HidOutput::switchHost(uint8_t slot) {
+  if (slot >= NUM_HOSTS || slot == g_slot) return;
+  Preferences prefs;
+  prefs.begin("spacedeck", false);
+  prefs.putUChar("host", slot);
+  prefs.end();
+  Serial.printf("[hid] switching to host slot %u (%s) - restarting\n", slot + 1, HOST_NAMES[slot]);
+  Serial.flush();
+  ESP.restart();   // the BLE address can only change before the radio starts
+}
 
 void HidOutput::tapKey(uint8_t mods, uint8_t key) {
   if (!ready("key")) return;

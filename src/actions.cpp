@@ -65,7 +65,7 @@ void runAction(const Action& a) {
     case ActionType::NextLayer: ui::setLayer((ui::layer() + 1) % NUM_LAYERS); break;
     case ActionType::Ambient:   ui::showAmbient(); break;
     case ActionType::Snippet:   if (NUM_SNIPPETS) hid.typeText(SNIPPETS[g_snip].text); break;
-    case ActionType::SnippetMenu: ui::openMenu(NUM_SNIPPETS, g_snip); break;
+    case ActionType::SnippetMenu: ui::openMenu(ui::Menu::Snippets, NUM_SNIPPETS, g_snip); break;
   }
 }
 

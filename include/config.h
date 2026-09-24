@@ -44,21 +44,42 @@ constexpr uint8_t EPD_PIN_RST  = 15;
 constexpr uint8_t EPD_PIN_BUSY = 4;
 // 1 or 3 = landscape. If the picture is upside down in the case, switch to the other.
 constexpr uint8_t EPD_ROTATION = 1;
-// Partial refreshes leave faint ghosting; do a full (flashing) refresh after this many.
-constexpr uint32_t EPD_FULL_REFRESH_EVERY = 50;
+// ---- Refresh policy (wear + ghosting) ----
+// Panel is rated ~1,000,000 refreshes; the boot log shows the running total.
+// Full (flashing) refreshes clear ghosting. They happen after big screen
+// changes (boot, link screens, host switch, leaving the wave), once when the
+// pad has sat untouched for a while, and as a rare safety net during use.
+constexpr uint32_t EPD_FULL_REFRESH_EVERY = 100;     // safety net: partials in a row
+constexpr uint32_t EPD_IDLE_CLEAN_AFTER   = 5;       // ...and at least this many partials built up
+constexpr uint32_t EPD_IDLE_CLEAN_MS      = 120000;  // untouched this long -> one full clean
+constexpr bool     EPD_FULL_ON_LAYER_SWITCH = false; // true = no layer ghosting, but flash + ~2 s per switch
+constexpr uint32_t EPD_POWER_OFF_MS       = 1000;    // cut panel high voltage this long after a refresh
 
 // ---------------- UI timing ----------------
 constexpr uint32_t KEY_HOLD_MS         = 600;             // long-press threshold
 constexpr uint32_t UI_POPUP_MS         = 1500;            // knob popup stays this long after the last click
-constexpr uint32_t UI_PRESS_FLASH_MS   = 250;             // pressed key's cell stays inverted
+// Mark a key while pressed (hollow number tag + thicker border; shortcut/media
+// keys only). Costs two refreshes per press; false = snappiest + half the wear.
+constexpr bool     UI_PRESS_FLASH      = true;
+constexpr uint32_t UI_PRESS_FLASH_MS   = 300;             // how long the press marker shows
 constexpr uint32_t UI_MENU_MS          = 10000;           // snippet menu closes after this long untouched
 constexpr uint32_t UI_LINKED_MS        = 1600;            // "LINK ESTABLISHED" before the layer view
 constexpr uint32_t UI_AMBIENT_AFTER_MS = 5UL * 60 * 1000; // idle time before the ambient wave
-constexpr uint32_t AMBIENT_FRAME_MS    = 1000;            // ambient redraw rate (e-paper: keep >= ~500)
+constexpr uint32_t AMBIENT_FRAME_MS    = 5000;            // slow drift: one frame every 5 s
+constexpr uint32_t AMBIENT_RUN_MS      = 15UL * 60 * 1000;// then rest on a still frame (screen idle)
+constexpr uint32_t AMBIENT_FULL_EVERY  = 24;              // full clean every 24 frames (~2 min) while drifting
+constexpr uint32_t UI_LINK_ANIM_MS     = 60000;           // link screens animate 1 min, then hold still
 constexpr uint8_t  AMBIENT_STYLE       = 0;               // 0 = line, 1 = bars, 2 = scope
 
 // ---------------- Bluetooth ----------------
 constexpr const char* BLE_DEVICE_NAME  = "SpaceDeck";
+
+// Host slots: one computer per slot. Each slot is its own Bluetooth device
+// ("SpaceDeck HOST2"), so computers never fight over the pad.
+// Hold the knob to open the HOSTS menu. Names: 5 characters max.
+constexpr uint8_t NUM_HOSTS = 3;
+constexpr const char* HOST_NAMES[NUM_HOSTS] = {"HOME", "WORK", "MINI"};  // Personal Mac, Work Mac, Mac Mini
+constexpr uint32_t KNOB_HOLD_MS = 800;   // hold the knob this long for the HOSTS menu
 constexpr const char* BLE_MANUFACTURER = "Daniel";
 // Gap between HID reports. Too small and macOS can drop keystrokes.
 constexpr uint32_t BLE_SEND_DELAY_MS = 8;

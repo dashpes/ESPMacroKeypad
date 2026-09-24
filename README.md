@@ -102,6 +102,13 @@ Edit what the keys do in `src/actions.cpp` (keymap, long-press actions, snippets
   opens the list; turn the knob, push to type it and make it the default (kept
   across power cycles). Any key or 10 s idle closes the menu. Edit the
   `SNIPPETS` list in `actions.cpp`.
+- **Several computers (host slots):** hold the **knob** (~0.8 s) for the HOSTS
+  menu; turn to pick, push to switch (~2 s, the radio restarts). Each slot is
+  its own Bluetooth device (`SpaceDeck HOME`, `SpaceDeck WORK`, `SpaceDeck MINI`), so pair
+  each computer once with its own slot. Slot 1 keeps the original address, so
+  an existing pairing keeps working. The active slot shows in the top bar.
+  Names and count: `NUM_HOSTS` / `HOST_NAMES` in `config.h` (5 letters max).
+  A quick knob push still does the layer's push action (mute on Media).
 - Serial command `a` jumps to the ambient screen for testing.
 - Timing knobs (popup length, idle time before ambient, refresh cadence) are in
   `config.h` under UI timing.

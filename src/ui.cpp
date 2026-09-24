@@ -5,9 +5,9 @@ namespace ui {
 namespace {
 
 portMUX_TYPE g_mux = portMUX_INITIALIZER_UNLOCKED;
-Snapshot g{Screen::Boot, 0, false, -1, Popup::None, 0, 0, 0, 1, false, 0, 0};
+Snapshot g = [] { Snapshot s{}; s.screen = Screen::Boot; s.pressedKey = -1; s.popup = Popup::None; s.menu = Menu::None; s.rev = 1; return s; }();
 uint32_t g_menuAt = 0;
-int g_menuPick = -1;
+Pick g_pick{Menu::None, -1};
 uint32_t g_pressedAt = 0, g_popupAt = 0, g_lastInput = 0;
 bool g_bootDone = false;
 
@@ -17,12 +17,12 @@ void setScreen(Screen s) {
   g.screenSince = millis();
   g.popup = Popup::None;
   g.pressedKey = -1;
-  g.menuOpen = false;
+  g.menu = Menu::None;
   g.rev++;
 }
 
 // caller holds g_mux
-void closeMenu() { g.menuOpen = false; g.rev++; }
+void closeMenu() { g.menu = Menu::None; g.rev++; }
 
 // caller holds g_mux; returns true if this input only woke the screen
 bool wakeIfAmbient() {
@@ -34,9 +34,12 @@ bool wakeIfAmbient() {
 
 }  // namespace
 
-void begin(uint8_t stuckKeys) {
+void begin(uint8_t stuckKeys, uint8_t host, bool fastBoot, uint8_t layer) {
   portENTER_CRITICAL(&g_mux);
   g.stuckKeys = stuckKeys;
+  g.host = host;
+  g.fastBoot = fastBoot;
+  g.layer = layer;
   g_lastInput = millis();
   setScreen(Screen::Boot);
   portEXIT_CRITICAL(&g_mux);
@@ -49,11 +52,12 @@ Snapshot snapshot() {
   return s;
 }
 
-bool onKey(uint8_t i) {
+bool onKey(uint8_t i, bool flash) {
   portENTER_CRITICAL(&g_mux);
-  if (g.menuOpen) { closeMenu(); g_lastInput = millis(); portEXIT_CRITICAL(&g_mux); return false; }  // cancel
+  if (g.menu != Menu::None) { closeMenu(); g_lastInput = millis(); portEXIT_CRITICAL(&g_mux); return false; }  // cancel
   bool fire = !wakeIfAmbient();
-  if (fire && g.screen == Screen::Layer) {
+  // Each flash costs two e-paper refreshes (on + off), so it's skipped when not wanted.
+  if (fire && flash && UI_PRESS_FLASH && g.screen == Screen::Layer) {
     g.pressedKey = i;
     g.popup = Popup::None;
     g_pressedAt = millis();
@@ -65,7 +69,7 @@ bool onKey(uint8_t i) {
 
 bool onKnobTurn(int32_t d) {
   portENTER_CRITICAL(&g_mux);
-  if (g.menuOpen) {
+  if (g.menu != Menu::None) {
     const int n = g.menuCount;
     g.menuIndex = (uint8_t)(((g.menuIndex + d) % n + n) % n);
     g_menuAt = g_lastInput = millis();
@@ -89,8 +93,8 @@ bool onKnobTurn(int32_t d) {
 
 bool onKnobPush() {
   portENTER_CRITICAL(&g_mux);
-  if (g.menuOpen) {
-    g_menuPick = g.menuIndex;
+  if (g.menu != Menu::None) {
+    g_pick = {g.menu, g.menuIndex};
     g_lastInput = millis();
     closeMenu();
     portEXIT_CRITICAL(&g_mux);
@@ -136,11 +140,11 @@ void showAmbient() {
   portEXIT_CRITICAL(&g_mux);
 }
 
-void openMenu(uint8_t count, uint8_t start) {
+void openMenu(Menu kind, uint8_t count, uint8_t start) {
   if (!count) return;
   portENTER_CRITICAL(&g_mux);
   if (g.screen == Screen::Layer) {
-    g.menuOpen = true;
+    g.menu = kind;
     g.menuCount = count;
     g.menuIndex = start < count ? start : 0;
     g.popup = Popup::None;
@@ -151,12 +155,26 @@ void openMenu(uint8_t count, uint8_t start) {
   portEXIT_CRITICAL(&g_mux);
 }
 
-int takeMenuSelection() {
+Pick takeMenuSelection() {
   portENTER_CRITICAL(&g_mux);
-  const int p = g_menuPick;
-  g_menuPick = -1;
+  const Pick p = g_pick;
+  g_pick = {Menu::None, -1};
   portEXIT_CRITICAL(&g_mux);
   return p;
+}
+
+bool menuOpenOrAmbient() {
+  portENTER_CRITICAL(&g_mux);
+  const bool r = g.menu != Menu::None || g.screen == Screen::Ambient;
+  portEXIT_CRITICAL(&g_mux);
+  return r;
+}
+
+void showSwitching(uint8_t slot) {
+  portENTER_CRITICAL(&g_mux);
+  g.switchTo = slot;
+  setScreen(Screen::Switching);
+  portEXIT_CRITICAL(&g_mux);
 }
 
 void bootDone() {
@@ -172,8 +190,8 @@ void tick() {
   if (g.screen == Screen::Linked && now - g.screenSince > UI_LINKED_MS) setScreen(Screen::Layer);
   if (g.pressedKey >= 0 && now - g_pressedAt > UI_PRESS_FLASH_MS) { g.pressedKey = -1; g.rev++; }
   if (g.popup != Popup::None && now - g_popupAt > UI_POPUP_MS) { g.popup = Popup::None; g.rev++; }
-  if (g.menuOpen && now - g_menuAt > UI_MENU_MS) closeMenu();
-  if (g.screen == Screen::Layer && !g.menuOpen && g.connected && now - g_lastInput > UI_AMBIENT_AFTER_MS) setScreen(Screen::Ambient);
+  if (g.menu != Menu::None && now - g_menuAt > UI_MENU_MS) closeMenu();
+  if (g.screen == Screen::Layer && g.menu == Menu::None && g.connected && now - g_lastInput > UI_AMBIENT_AFTER_MS) setScreen(Screen::Ambient);
   portEXIT_CRITICAL(&g_mux);
 }
 
