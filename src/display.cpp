@@ -350,7 +350,7 @@ void render(const ui::Snapshot& s) {
 }
 
 void task(void*) {
-  SPI.begin(EPD_PIN_CLK, -1, EPD_PIN_DIN, EPD_PIN_CS);
+  SPI.begin(EPD_PIN_CLK, EPD_PIN_MISO_UNUSED, EPD_PIN_DIN, EPD_PIN_CS);
   epd.epd2.selectSPI(SPI, SPISettings(10000000, MSBFIRST, SPI_MODE0));   // 10 MHz: faster frame upload
   epd.init(0, true, 2, false);   // no serial diagnostics
   epd.setRotation(EPD_ROTATION);

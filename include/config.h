@@ -42,6 +42,9 @@ constexpr uint8_t EPD_PIN_CS   = 5;
 constexpr uint8_t EPD_PIN_DC   = 16;
 constexpr uint8_t EPD_PIN_RST  = 15;
 constexpr uint8_t EPD_PIN_BUSY = 4;
+// The panel never talks back, but SPI.begin() with no MISO takes the default,
+// GPIO19 (KEY 5), and drops its pull-up. Give it an unused input-only pin.
+constexpr uint8_t EPD_PIN_MISO_UNUSED = 35;
 // 1 or 3 = landscape. If the picture is upside down in the case, switch to the other.
 constexpr uint8_t EPD_ROTATION = 1;
 // ---- Refresh policy (wear + ghosting) ----
