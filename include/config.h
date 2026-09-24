@@ -59,7 +59,6 @@ constexpr uint32_t EPD_POWER_OFF_MS       = 1000;    // cut panel high voltage t
 
 // ---------------- UI timing ----------------
 constexpr uint32_t KEY_HOLD_MS         = 600;             // long-press threshold
-constexpr uint32_t UI_POPUP_MS         = 1500;            // knob popup stays this long after the last click
 // Mark a key while pressed (hollow number tag + thicker border; shortcut/media
 // keys only). Costs two refreshes per press; false = snappiest + half the wear.
 constexpr bool     UI_PRESS_FLASH      = true;

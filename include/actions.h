@@ -26,7 +26,6 @@ constexpr Action AMBIENT()                                { return {ActionType::
 struct Layer {
   const char* name;       // header, e.g. ">MEDIA"
   const char* knobShort;  // header, e.g. "KNOB:VOL"
-  const char* knobLong;   // knob popup title, e.g. "VOLUME"
   Action keys[NUM_KEYS];
   Action encCW, encCCW, encPress;
   Action holds[NUM_KEYS]; // long-press actions; leave out / NONE() for none

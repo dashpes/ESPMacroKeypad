@@ -142,7 +142,7 @@ kbd{font:600 11px var(--mono);background:var(--chip);border:1px solid var(--line
   <div class="below">
     <div class="card"><h4>Labels line up with the keys</h4><p>The screen is split into a 2 × 4 grid, 61 px per cell, so each label sits right above its key. The small number tag in each corner matches the key under it.</p></div>
     <div class="card"><h4>Only what changed redraws</h4><p>A key press inverts one cell; a layer switch redraws the grid; the header stays put. Every partial redraw leaves a faint ghost of the old image, so the firmware does a full, flashing refresh at boot and every ~50 partial updates to clear it.</p></div>
-    <div class="card"><h4>The knob shows steps, not a level</h4><p>The popup opens on the right edge, pointing at the knob beside the screen, and the header's <code>KNOB:</code> label sits on that side too. SpaceDeck only sends “volume up” and “volume down”, so the popup counts clicks (<code>+3</code>) instead of guessing the Mac’s volume. It closes 1.5 s after the last click.</p></div>
+    <div class="card"><h4>The knob draws nothing</h4><p>A turn or a push goes straight to the Mac, and the Mac shows the volume or the tab. The header's <code>KNOB:</code> label shows what the knob does on this layer. A popup on e-paper leaves a ghost when it closes, so there is none.</p></div>
     <div class="card"><h4>Tap vs. hold</h4><p>Keys with a dot in their corner have a long-press action (hold ~0.6 s): <code>8</code> jumps to the ambient wave, <code>SIG</code> opens the snippet menu. Those keys fire their tap on release; every other key fires the instant you press it.</p></div>
     <div class="card"><h4>Several computers</h4><p>Hold the knob for the HOSTS menu. Each slot is paired to one computer and appears in its Bluetooth list as its own device. The active slot is shown in the top bar, e.g. <code>WORK KNOB:VOL</code>.</p></div>
     <div class="card"><h4>Ambient mode</h4><p>After 5 min with no input. The wave is generated on the pad. Making it follow your music would need a small I2S mic or a Mac helper app sending levels over Bluetooth. The first key press only wakes the screen, so it never fires a shortcut by accident.</p></div>
@@ -219,11 +219,11 @@ const BT = ["..#..","..##.","#.#.#",".###.","..#..",".###.","#.#.#","..##.","..#
 // ======================================================================
 // keys: [label, small line, what the Mac receives]; holds: long-press actions
 const LAYERS = [
-  { name: "MEDIA", knob: "VOL", knobName: "VOLUME", cw: "VOL+", ccw: "VOL-", push: "MUTE",
+  { name: "MEDIA", knob: "VOL", cw: "VOL+", ccw: "VOL-", push: "MUTE",
     keys: [["PLAY","PAUSE","Play/Pause"],["PREV","TRACK","Previous track"],["NEXT","TRACK","Next track"],["SPOT","CMD+SPACE","⌘Space (Spotlight)"],
            ["COPY","CMD+C","⌘C"],["PASTE","CMD+V","⌘V"],["SHOT","CMD+SH+4","⌘⇧4"],["DEV>","LAYER",null]],
     holds: [null,null,null,null,null,null,null,"ambient"] },
-  { name: "DEV", knob: "TABS", knobName: "TABS", cw: "TAB>", ccw: "<TAB", push: null,
+  { name: "DEV", knob: "TABS", cw: "TAB>", ccw: "<TAB", push: null,
     keys: [["SAVE","CMD+S","⌘S"],["FIND","CMD+F","⌘F"],["TERM","CTRL+`","⌃`"],["CMT","CMD+/","⌘/"],
            ["UNDO","CMD+Z","⌘Z"],["REDO","CMD+SH+Z","⌘⇧Z"],["SIG","*snippet",null],["MED>","LAYER",null]],
     holds: [null,null,null,null,null,null,"menu","ambient"] },
@@ -257,9 +257,6 @@ const SCREENS = [
   { id: "layer",    name: "Layer view",       rf: "PARTIAL",
     when: "Normal use.", refresh: "Partial for a key press; full on a layer switch",
     note: "Header: layer, what the knob does, page 1/2, link status. The pressed key's cell flashes inverted." },
-  { id: "overlay",  name: "Knob popup",       rf: "PARTIAL",
-    when: "Turning or pushing the knob.", refresh: "Partial, closes 1.5 s after the last click",
-    note: "Counts clicks in each direction. It can't show the Mac's actual volume, which the pad never receives." },
   { id: "hosts",    name: "Hosts menu",       rf: "PARTIAL",
     when: "Hold the knob (~0.8 s), any layer.", refresh: "Full to open and close; partial per knob click; closes after 10 s untouched",
     note: "One slot per computer; each shows up as its own Bluetooth device (SpaceDeck HOME, WORK, MINI). Push to switch: about 2 s, and that computer reconnects on its own. * marks the active slot." },
@@ -280,7 +277,6 @@ const SCREENS = [
 const st = {
   screen: "boot", t0: performance.now(), layer: 0, connected: true,
   pressed: -1, pressedAt: 0,
-  overlay: null,            // {kind:'turn'|'push', delta, at}
   bootAfter: "layer",
   menu: null,               // {kind:'snip'|'host', index, at}
   host: 0, switchTo: 0,
@@ -292,7 +288,6 @@ const since = () => (now() - st.t0) / 1000;
 const go = (screen, opts = {}) => {
   st.screen = screen; st.t0 = now();
   if (opts.flash) st.flashUntil = now() + 260;
-  if (screen !== "overlay") st.overlay = null;
   syncUI();
 };
 
@@ -425,42 +420,6 @@ function drawMenu() {
   if (lines.length > 2) text("...", 247 - tw("...", 1), 111, 1, PAPER);
 }
 
-function drawOverlay() {
-  drawLayer();
-  const o = st.overlay;
-  if (!o) return;
-  const L = LAYERS[st.layer];
-  // anchored to the right edge, centred on the screen: the knob sits just to the right
-  const w = 194, h = 72, x = W - w - 8, y = 61 - h / 2;  // knob centre = screen centre (y 61)
-  rect(x - 2, y - 2, w + 4, h + 4, INK);
-  rect(x, y, w, h, PAPER);
-  frame(x + 2, y + 2, w - 4, h - 4, INK);
-  // pointer toward the knob
-  for (let i = 0; i < 6; i++) rect(x + w + i, 61 - (5 - i), 1, (5 - i) * 2 + 1, PAPER);
-  text(L.knobName, x + 10, y + 9, 1, INK);
-  if (o.kind === "push") {
-    const label = st.layer === 0 ? "MUTE" : "---";
-    ctext(label, x + w / 2, y + 26, 3, INK);
-    ctext(st.layer === 0 ? "TOGGLED" : "NO ACTION ON THIS LAYER", x + w / 2, y + 54, 1, INK);
-  } else {
-    const d = Math.max(-8, Math.min(8, o.delta));
-    const s = (o.delta > 0 ? "+" : "") + o.delta;
-    text(s, x + w - 10 - tw(s, 3), y + 6, 3, INK);
-    const dir = o.delta > 0 ? L.cw : L.ccw;
-    text(dir, x + 10, y + 21, 1, INK);
-    // step meter: 17 ticks, centre = 0
-    const tx0 = x + 14, ty = y + 42;
-    for (let k = -8; k <= 8; k++) {
-      const tx = tx0 + (k + 8) * 10;
-      const filled = (d > 0 && k > 0 && k <= d) || (d < 0 && k < 0 && k >= d);
-      if (k === 0) rect(tx + 2, ty - 3, 2, 18, INK);
-      else if (filled) rect(tx, ty, 6, 12, INK);
-      else frame(tx, ty, 6, 12, INK);
-    }
-  }
-  if (now() - o.at > 1500) { st.overlay = null; go("layer"); }
-}
-
 function drawAmbient() {
   const style = document.getElementById("wavestyle").value;
   header("AMBIENT", "ANY KEY: WAKE", st.connected ? "on" : "off");
@@ -499,7 +458,7 @@ function drawSwitching() {
   ctext("RESTARTING BLUETOOTH...", 125, 94, 1, PAPER);
   if (since() > 2.2) { st.host = st.switchTo; st.connected = true; go("linked"); }
 }
-const DRAW = { switching: drawSwitching, boot: drawBoot, awaiting: drawAwaiting, linked: drawLinked, lost: drawLost, layer: drawLayer, overlay: drawOverlay, ambient: drawAmbient };
+const DRAW = { switching: drawSwitching, boot: drawBoot, awaiting: drawAwaiting, linked: drawLinked, lost: drawLost, layer: drawLayer, ambient: drawAmbient };
 
 // ======================================================================
 //  Render to canvas (e-paper colours, optional pixel grid)
@@ -584,7 +543,7 @@ function fireTap(i) {
 function fireHold(i) {
   const h = LAYERS[st.layer].holds[i];
   if (h === "ambient") go("ambient");
-  if (h === "menu") { st.menu = { kind: "snip", index: st.snip, at: now() }; st.overlay = null; if (st.screen !== "layer") go("layer"); syncUI(); }
+  if (h === "menu") { st.menu = { kind: "snip", index: st.snip, at: now() }; if (st.screen !== "layer") go("layer"); syncUI(); }
 }
 
 const held = {};   // per key: {since, swallowed, holdFired, timer}
@@ -595,8 +554,8 @@ function keyDown(i) {
   const k = held[i] = { swallowed: false, holdFired: false, timer: 0 };
   if (st.menu) { st.menu = null; k.swallowed = true; syncUI(); return; }         // any key cancels the menu
   if (st.screen === "ambient") { go("layer"); k.swallowed = true; return; }    // first press only wakes
-  if (!["layer", "overlay"].includes(st.screen)) { k.swallowed = true; return; } // keys inactive on link screens
-  st.pressed = i; st.pressedAt = now(); if (st.screen === "overlay") go("layer");
+  if (st.screen !== "layer") { k.swallowed = true; return; }                     // keys inactive on link screens
+  st.pressed = i; st.pressedAt = now();
   if (!LAYERS[st.layer].holds[i]) { fireTap(i); return; }                       // no hold action: fire right away
   void keyBtns[i].offsetWidth;                  // restart the progress bar
   keyBtns[i].classList.add("holding");
@@ -618,12 +577,8 @@ function pressKey(i) { keyDown(i); setTimeout(() => keyUp(i), 90); }
 function turn(dir) {
   if (st.menu) { const n = st.menu.kind === "host" ? HOST_NAMES.length : SNIPPETS.length; st.menu.index = ((st.menu.index + dir) % n + n) % n; st.menu.at = now(); return; }
   if (st.screen === "ambient") { go("layer"); return; }
-  if (!["layer", "overlay"].includes(st.screen)) return;
+  if (st.screen !== "layer") return;
   send(dir > 0 ? LAYERS[st.layer].cw : LAYERS[st.layer].ccw);
-  const o = st.overlay;
-  const delta = o && o.kind === "turn" && Math.sign(o.delta) === dir ? o.delta + dir : dir;
-  st.overlay = { kind: "turn", delta, at: now() };
-  if (st.screen !== "overlay") { st.screen = "overlay"; st.t0 = now(); syncUI(); }
 }
 function push() {
   if (st.menu && st.menu.kind === "host") {
@@ -633,10 +588,8 @@ function push() {
   }
   if (st.menu) { st.snip = st.menu.index; st.menu = null; syncKeys(); syncUI(); fireTap(6); return; }
   if (st.screen === "ambient") { go("layer"); return; }
-  if (!["layer", "overlay"].includes(st.screen)) return;
+  if (st.screen !== "layer") return;
   send(LAYERS[st.layer].push || "nothing (no knob push on this layer)");
-  st.overlay = { kind: "push", delta: 0, at: now() };
-  if (st.screen !== "overlay") { st.screen = "overlay"; st.t0 = now(); syncUI(); }
 }
 document.getElementById("cw").addEventListener("click", () => turn(1));
 document.getElementById("ccw").addEventListener("click", () => turn(-1));
@@ -647,8 +600,8 @@ function knobDown() {
   if (st.menu || st.screen === "ambient") { push(); knobHold = { swallowed: true }; return; }   // select / wake only
   const k = knobHold = { swallowed: false, fired: false, timer: 0 };
   k.timer = setTimeout(() => {
-    if (knobHold !== k || !["layer", "overlay"].includes(st.screen)) return;
-    k.fired = true; st.overlay = null;
+    if (knobHold !== k || st.screen !== "layer") return;
+    k.fired = true;
     st.menu = { kind: "host", index: st.host, at: now() };
     if (st.screen !== "layer") go("layer"); syncUI();
   }, KNOB_HOLD_MS);
@@ -688,7 +641,6 @@ function jump(id) {
   if (id === "menu") { st.connected = true; st.layer = 1; syncKeys(); go("layer"); fireHold(6); return; }
   if (id === "hosts") { st.connected = true; go("layer"); st.menu = { kind: "host", index: (st.host + 1) % HOST_NAMES.length, at: now() }; syncUI(); return; }
   if (id === "switching") { st.switchTo = (st.host + 1) % HOST_NAMES.length; }
-  if (id === "overlay") { st.connected = true; st.overlay = { kind: "turn", delta: 3, at: now() + 2500 }; st.screen = "overlay"; st.t0 = now(); syncUI(); return; }
   if (id === "linked") st.connected = true;
   if (id === "lost" || id === "awaiting") st.connected = false;
   if (id === "layer" || id === "ambient") st.connected = true;

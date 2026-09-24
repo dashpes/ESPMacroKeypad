@@ -110,7 +110,7 @@ Edit what the keys do in `src/actions.cpp` (keymap, long-press actions, snippets
   Names and count: `NUM_HOSTS` / `HOST_NAMES` in `config.h` (5 letters max).
   A quick knob push still does the layer's push action (mute on Media).
 - Serial command `a` jumps to the ambient screen for testing.
-- Timing knobs (popup length, idle time before ambient, refresh cadence) are in
+- Timing knobs (idle time before ambient, refresh cadence) are in
   `config.h` under UI timing.
 
 Flash layout: the firmware env uses `huge_app.csv` (3 MB app, no OTA) because

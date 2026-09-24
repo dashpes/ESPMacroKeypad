@@ -19,14 +19,14 @@ const uint8_t NUM_SNIPPETS = sizeof(SNIPPETS) / sizeof(SNIPPETS[0]);
 // Labels: up to 5 characters show on the screen. The small line under each
 // label (CMD+C, TRACK, ...) is generated from the action itself.
 const Layer LAYERS[] = {
-    {"Media", "VOL", "VOLUME",
+    {"Media", "VOL",
      {MEDIA("Play", Media::PlayPause), MEDIA("Prev", Media::Prev), MEDIA("Next", Media::Next), KEY("Spot", MOD_GUI, ' '),
       KEY("Copy", MOD_GUI, 'c'), KEY("Paste", MOD_GUI, 'v'), KEY("Shot", MOD_GUI | MOD_SHIFT, '4'), NEXT_LAYER()},
      MEDIA("Vol+", Media::VolUp), MEDIA("Vol-", Media::VolDown), MEDIA("Mute", Media::Mute),
      // holds:  1       2       3       4       5       6       7       8
      {NONE(), NONE(), NONE(), NONE(), NONE(), NONE(), NONE(), AMBIENT()}},
 
-    {"Dev", "TABS", "TABS",
+    {"Dev", "TABS",
      {KEY("Save", MOD_GUI, 's'), KEY("Find", MOD_GUI, 'f'), KEY("Term", MOD_CTRL, '`'), KEY("Cmt", MOD_GUI, '/'),
       KEY("Undo", MOD_GUI, 'z'), KEY("Redo", MOD_GUI | MOD_SHIFT, 'z'), SNIPPET("Sig"), NEXT_LAYER()},
      KEY("Tab>", MOD_CTRL, '\t'), KEY("<Tab", MOD_CTRL | MOD_SHIFT, '\t'), NONE(),

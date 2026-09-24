@@ -5,17 +5,16 @@ namespace ui {
 namespace {
 
 portMUX_TYPE g_mux = portMUX_INITIALIZER_UNLOCKED;
-Snapshot g = [] { Snapshot s{}; s.screen = Screen::Boot; s.pressedKey = -1; s.popup = Popup::None; s.menu = Menu::None; s.rev = 1; return s; }();
+Snapshot g = [] { Snapshot s{}; s.screen = Screen::Boot; s.pressedKey = -1; s.menu = Menu::None; s.rev = 1; return s; }();
 uint32_t g_menuAt = 0;
 Pick g_pick{Menu::None, -1};
-uint32_t g_pressedAt = 0, g_popupAt = 0, g_lastInput = 0;
+uint32_t g_pressedAt = 0, g_lastInput = 0;
 bool g_bootDone = false;
 
 // caller holds g_mux
 void setScreen(Screen s) {
   g.screen = s;
   g.screenSince = millis();
-  g.popup = Popup::None;
   g.pressedKey = -1;
   g.menu = Menu::None;
   g.rev++;
@@ -59,7 +58,6 @@ bool onKey(uint8_t i, bool flash) {
   // Each flash costs two e-paper refreshes (on + off), so it's skipped when not wanted.
   if (fire && flash && UI_PRESS_FLASH && g.screen == Screen::Layer) {
     g.pressedKey = i;
-    g.popup = Popup::None;
     g_pressedAt = millis();
     g.rev++;
   }
@@ -77,16 +75,7 @@ bool onKnobTurn(int32_t d) {
     portEXIT_CRITICAL(&g_mux);
     return false;
   }
-  bool fire = !wakeIfAmbient();
-  if (fire && g.screen == Screen::Layer) {
-    // keep counting while turning the same way; reverse starts over
-    bool sameDir = g.popup == Popup::Turn && ((g.popupDelta > 0) == (d > 0));
-    int32_t v = (sameDir ? g.popupDelta : 0) + d;
-    g.popupDelta = (int16_t)constrain(v, -99, 99);
-    g.popup = Popup::Turn;
-    g_popupAt = millis();
-    g.rev++;
-  }
+  bool fire = !wakeIfAmbient();   // no popup: the host shows the result, and a popup leaves a ghost
   portEXIT_CRITICAL(&g_mux);
   return fire;
 }
@@ -100,13 +89,7 @@ bool onKnobPush() {
     portEXIT_CRITICAL(&g_mux);
     return false;
   }
-  bool fire = !wakeIfAmbient();
-  if (fire && g.screen == Screen::Layer) {
-    g.popup = Popup::Push;
-    g.popupDelta = 0;
-    g_popupAt = millis();
-    g.rev++;
-  }
+  bool fire = !wakeIfAmbient();   // no popup, same as a turn
   portEXIT_CRITICAL(&g_mux);
   return fire;
 }
@@ -147,7 +130,6 @@ void openMenu(Menu kind, uint8_t count, uint8_t start) {
     g.menu = kind;
     g.menuCount = count;
     g.menuIndex = start < count ? start : 0;
-    g.popup = Popup::None;
     g.pressedKey = -1;
     g_menuAt = millis();
     g.rev++;
@@ -189,7 +171,6 @@ void tick() {
   portENTER_CRITICAL(&g_mux);
   if (g.screen == Screen::Linked && now - g.screenSince > UI_LINKED_MS) setScreen(Screen::Layer);
   if (g.pressedKey >= 0 && now - g_pressedAt > UI_PRESS_FLASH_MS) { g.pressedKey = -1; g.rev++; }
-  if (g.popup != Popup::None && now - g_popupAt > UI_POPUP_MS) { g.popup = Popup::None; g.rev++; }
   if (g.menu != Menu::None && now - g_menuAt > UI_MENU_MS) closeMenu();
   if (g.screen == Screen::Layer && g.menu == Menu::None && g.connected && now - g_lastInput > UI_AMBIENT_AFTER_MS) setScreen(Screen::Ambient);
   portEXIT_CRITICAL(&g_mux);

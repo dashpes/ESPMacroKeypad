@@ -18,7 +18,7 @@ GxEPD2_BW<GxEPD2_213_GDEY0213B74, GxEPD2_213_GDEY0213B74::HEIGHT>
 
 constexpr int W = 250, H = 122;
 // Hybrid retro terminal: light background + dark text (what e-paper does best:
-// least ghosting, no fading blacks), with an inverted header bar and popups.
+// least ghosting, no fading blacks), with an inverted header bar.
 constexpr uint16_t BG = GxEPD_WHITE, FG = GxEPD_BLACK;
 
 // ---------------- primitives (same as the preview) ----------------
@@ -252,40 +252,6 @@ void drawSwitching(const ui::Snapshot& s) {
   ctext("RESTARTING BLUETOOTH...", 125, 94, 1, FG);
 }
 
-void drawPopup(const ui::Snapshot& s) {
-  const Layer& L = LAYERS[s.layer];
-  // right edge, centred on the screen: the knob sits just to the right
-  const int w = 194, h = 72, x = W - w - 8, y = 61 - h / 2;
-  rect(x - 2, y - 2, w + 4, h + 4, BG);
-  rect(x, y, w, h, FG);
-  frame(x + 2, y + 2, w - 4, h - 4, BG);
-  for (int i = 0; i < 6; i++) rect(x + w + i, 61 - (5 - i), 1, (5 - i) * 2 + 1, FG);
-  text(L.knobLong, x + 10, y + 9, 1, BG);
-  if (s.popup == ui::Popup::Push) {
-    char lbl[8];
-    const bool none = L.encPress.type == ActionType::None;
-    actionMainLabel(L.encPress, s.layer, lbl, sizeof lbl);
-    ctext(none ? "---" : lbl, x + w / 2.0f, y + 26, 3, BG);
-    ctext(none ? "NO ACTION ON THIS LAYER" : "TOGGLED", x + w / 2.0f, y + 54, 1, BG);
-    return;
-  }
-  const int d = constrain(s.popupDelta, -8, 8);
-  char num[8];
-  snprintf(num, sizeof num, "%+d", s.popupDelta);
-  text(num, x + w - 10 - tw(num, 3), y + 6, 3, BG);
-  char dir[8];
-  actionMainLabel(s.popupDelta > 0 ? L.encCW : L.encCCW, s.layer, dir, sizeof dir);
-  text(dir, x + 10, y + 21, 1, BG);
-  const int tx0 = x + 14, ty = y + 42;
-  for (int k = -8; k <= 8; k++) {
-    const int tx = tx0 + (k + 8) * 10;
-    const bool filled = (d > 0 && k > 0 && k <= d) || (d < 0 && k < 0 && k >= d);
-    if (k == 0) rect(tx + 2, ty - 3, 2, 18, BG);
-    else if (filled) rect(tx, ty, 6, 12, BG);
-    else frame(tx, ty, 6, 12, BG);
-  }
-}
-
 void drawAmbient(const ui::Snapshot& s) {
   const uint32_t age = g_frame - s.screenSince;
   const bool resting = age >= AMBIENT_RUN_MS;
@@ -340,9 +306,8 @@ void render(const ui::Snapshot& s) {
     case ui::Screen::Linked:   drawLinked(s); break;
     case ui::Screen::Lost:     drawLost(s); break;
     case ui::Screen::Layer:
-      if (s.menu != ui::Menu::None) { drawMenu(s); break; }
-      drawLayerGrid(s);
-      if (s.popup != ui::Popup::None) drawPopup(s);
+      if (s.menu != ui::Menu::None) drawMenu(s);
+      else drawLayerGrid(s);
       break;
     case ui::Screen::Ambient:  drawAmbient(s); break;
     case ui::Screen::Switching: drawSwitching(s); break;
